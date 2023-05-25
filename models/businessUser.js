@@ -1,4 +1,5 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
+import uniqueValidator from "mongoose-unique-validator";
 
 const addressSchema = new mongoose.Schema({
   street: {
@@ -31,12 +32,12 @@ const gallerySchema = new mongoose.Schema({
   },
   event: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Event',
+    ref: "Event",
   },
   images: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Image',
+      ref: "Image",
     },
   ],
 });
@@ -58,244 +59,280 @@ const newsSchema = new mongoose.Schema({
   },
   businessUser: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'businessUser',
+    ref: "businessUser",
   },
 });
 
+const ownerSchema = new mongoose.Schema({
+  ownerName: {
+    type: String,
+    trim: true,
+  },
+  ownerSurname: {
+    type: String,
+    trim: true,
+  },
+  ownerDOB: {
+    type: Date,
+  },
+  ownerAddress: addressSchema,
+  ownerIDFront: {
+    type: String,
+  },
+  ownerIDBack: {
+    type: String,
+  },
+});
 
-const businessUserSchema = new mongoose.Schema({
-  organizerName: {
+const managerSchema = new mongoose.Schema({
+  managerName: {
     type: String,
-    required: false,
-    unique: true,
     trim: true,
   },
-  email: {
+  managerSurname: {
     type: String,
-    required: true,
-    unique: true,
     trim: true,
   },
-  username: {
+  managerDOB: {
+    type: Date,
+  },
+  managerAddress: addressSchema,
+  managerIDFront: {
     type: String,
-    required: true,
-    unique: true,
+  },
+  managerIDBack: {
+    type: String,
+  },
+  managerTitle: {
+    type: String,
+  },
+});
+
+const ticketSchema = new mongoose.Schema({
+  ticketName: {
+    type: String,
     trim: true,
   },
-  organizerImage: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Image',
+  dateStart: {
+    type: Date,
+  },
+  dateEnd: {
+    type: Date,
+  },
+  maxCapacity: {
+    type: Number,
+  },
+  price: {
+    type: Number,
+  },
+  vatPercentage: {
+    type: Number,
+  },
+  vat: {
+    type: Number,
+  },
+  priceWithVAT: {
+    type: Number,
+  },
+  description: {
+    type: String,
+  },
+  inventory: {
+    type: Number,
+  },
+});
+
+const eventSchema = new mongoose.Schema({
+  eventName: {
+    type: String,
+    trim: true,
   },
   urlSlug: {
     type: String,
-    unique: true,
     trim: true,
   },
-  password: {
-    type: String,
-    required: true,
+  eventStart: {
+    type: Date,
   },
-  salt: {
-    type: String,
-    required: true,
+  eventEnd: {
+    type: Date,
   },
-  galleries: [gallerySchema],
-  news: [newsSchema],
-  description: {
+  eventAddress: {
     type: String,
     trim: true,
   },
-  socialLinks: {
-    facebook: {
-      type: String,
-      trim: true,
-    },
-    instagram: {
-      type: String,
-      trim: true,
-    },
-    website: {
-      type: String,
-      trim: true,
-    },
-    twitter: {
-      type: String,
-      trim: true,
-    },
-    other: {
-      type: String,
-      trim: true,
-    },
+  eventCoordinatesX: {
+    type: String,
   },
-  company: {
-    taxNumber: {
-      type: Number,
-      unique: true,
-      sparse: true,
-    },
-    companyName: {
+  eventCoordinatesY: {
+    type: String,
+  },
+  eventVenue: {
+    type: String,
+  },
+  eventDescription: {
+    type: String,
+  },
+  eventBanner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Image",
+  },
+  featured: {
+    type: Boolean,
+    default: false,
+  },
+  tickets: [ticketSchema],
+});
+
+const certificateSchema = new mongoose.Schema({
+  id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Certificate",
+  },
+  hashedPassword: {
+    type: String,
+  },
+});
+
+const businessUserSchema = new mongoose.Schema(
+  {
+    organizerName: {
       type: String,
+      required: false,
+      unique: true,
       trim: true,
     },
-    companyAddress: addressSchema,
-    companyRegistryNumber: {
-      type: Number,
-      unique: true,
-      sparse: true,
-    }
-  },
-  owners: [
-    {
-      ownerName: {
-        type: String,
-        trim: true,
-      },
-      ownerSurname: {
-        type: String,
-        trim: true,
-      },
-      ownerDOB: {
-        type: Date,
-      },
-      ownerAddress: addressSchema,
-      ownerIDFront: {
-        type: String,
-      },
-      ownerIDBack: {
-        type: String,
-      },
-    },
-  ], managers: [
-    {
-      managerName: {
-        type: String,
-        trim: true,
-      },
-      managerSurname: {
-        type: String,
-        trim: true,
-      },
-      managerDOB: {
-        type: Date,
-      },
-      managerAddress: addressSchema,
-      managerIDFront: {
-        type: String,
-      },
-      managerIDBack: {
-        type: String,
-      },
-      managerTitle: {
-        type: String,
-      },
-    },
-  ],
-  events: [
-    {
-      eventName: {
-        type: String,
-        trim: true,
-      },
-      urlSlug: {
-        type: String,
-        trim: true,
-      },
-      eventStart: {
-        type: Date,
-      },
-      eventEnd: {
-        type: Date,
-      },
-      eventAddress: {
-        type: String,
-        trim: true,
-      },
-      eventCoordinatesX: {
-        type: String,
-      },
-      eventCoordinatesY: {
-        type: String,
-      },
-      eventVenue: {
-        type: String,
-      }, eventDescription: {
-        type: String,
-      },
-      eventDescription: {
-        type: String,
-      },
-      eventBanner: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Image',
-      },
-      featured: {
-        type: Boolean,
-        default: false,
-      },
-      tickets: [
-        {
-          ticketName: {
-            type: String,
-            trim: true,
-          },
-          dateStart: {
-            type: Date,
-          },
-          dateEnd: {
-            type: Date,
-          },
-          maxCapacity: {
-            type: Number,
-          },
-          price: {
-            type: Number,
-          },
-          vatPercentage: {
-            type: Number,
-          },
-          vat: {
-            type: Number,
-          },
-          priceWithVAT: {
-            type: Number,
-          },
-          description: {
-            type: String,
-          },
-          inventory: {
-            type: Number,
-          },
-        },
-      ],
-    },
-  ], certificate: {
-    id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Certificate',
-    },
-    hashedPassword: {
-      type: String,
-    },
-  }, contactInformation: {
     email: {
       type: String,
+      required: true,
+      unique: true,
       trim: true,
     },
-    phoneNumber: {
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    organizerImage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Image",
+    },
+    urlSlug: {
+      type: String,
+      unique: true,
+      trim: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    salt: {
+      type: String,
+      required: true,
+    },
+    galleries: [gallerySchema],
+    news: [newsSchema],
+    description: {
       type: String,
       trim: true,
-      required: false,
     },
-    website: {
-      type: String,
-      trim: true,
-      required: false,
+    socialLinks: {
+      facebook: {
+        type: String,
+        trim: true,
+      },
+      instagram: {
+        type: String,
+        trim: true,
+      },
+      website: {
+        type: String,
+        trim: true,
+      },
+      twitter: {
+        type: String,
+        trim: true,
+      },
+      other: {
+        type: String,
+        trim: true,
+      },
     },
-  },
-  resetPasswordToken: String,  // add the resetPasswordToken field
-  resetPasswordExpires: Date   // add the resetPasswordExpires field
-}, { collection: 'businessUsers' });
+    company: {
+      companyVAT: {
+        type: Number,
+        unique: true,
+        sparse: true,
+      },
+      companyName: {
+        type: String,
+        trim: true,
+      },
+      companyAddress: addressSchema,
+      companyRegistryNumber: {
+        type: Number,
+        unique: true,
+        sparse: true,
+      },
+    },
+    owners: [ownerSchema],
+    managers: [managerSchema],
+    events: [eventSchema],
+    certificate: certificateSchema,
+    contactInformation: {
+      email: {
+        type: String,
+        trim: true,
+      },
+      phoneNumber: {
+        type: String,
+        trim: true,
+        required: false,
+      },
+      website: {
+        type: String,
+        trim: true,
+        required: false,
+      },
+    },
+    financialInformation: {
+      IBAN: {
+        type: String,
+        trim: true,
+      },
+      accountName: {
+        type: String,
+        trim: true,
+      },
+      invoiceEmail: {
+        type: String,
+        trim: true,
+      },
+    },
+    marketingInformation: {
+      metaPixelId: {
+        type: String,
+        trim: true,
+      },
+      googleAnalyticsId: {
+        type: String,
+        trim: true,
+      },
+      apiAccessKey: {
+        type: String,
+        trim: true,
+      },
+    },
 
-const businessUser = mongoose.model('businessUser', businessUserSchema);
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
+  },
+  { collection: "businessUsers" }
+);
+
+businessUserSchema.plugin(uniqueValidator);
+
+const businessUser = mongoose.model("businessUser", businessUserSchema);
 
 export default businessUser;

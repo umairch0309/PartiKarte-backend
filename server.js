@@ -1,45 +1,36 @@
-import express from 'express';
-import { businessUsers } from './routes/business-users.js';
-import { events } from './routes/events.js';
-import { tickets } from './routes/tickets.js';
-import { contact } from './routes/contact.js';
-import { documents } from './routes/documents.js';
-import cors from 'cors'
-import swaggerJsDoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
-import bodyParser from 'body-parser';
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import router from "./routes/index.js";
+import connectDB from "./config/db.js";
+
+import HttpError from "./helpers/HttpError.js";
+
+dotenv.config();
+
+connectDB();
 
 const app = express();
+const port = process.env.PORT || 8000;
+
+app.use(cors());
 app.use(bodyParser.json());
+app.use("/api/", router);
 
-// Extended: https://swagger.io/specification/#infoObject
-const swaggerOptions = {
-    definition: {
-      openapi: '3.0.0',  // This is the important line
-      info: {
-        title: 'PARTIKARTE API',
-        description: 'PARTIKARTE API is an api for managing event tickets.',
-        contact: {
-          name: 'MAGNAMIC d.o.o.'
-        },
-        servers: ["http://localhost:5600"]
-      },
-    },
-    apis: ["./routes/*.js"]
-  };
+app.use((req, res, next) => {
+  const error = new HttpError("Could not find this route.", 404);
+  throw error;
+});
 
-  const swaggerDocs = swaggerJsDoc(swaggerOptions);
-  console.log(JSON.stringify(swaggerDocs, null, 2));
-  
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
-  
-  app.use(cors());
-  
-  app.use("/", businessUsers);
-  app.use("/", events);
-  app.use("/", tickets);
-  app.use("/", contact);
-  app.use("/", documents);
-  
-  app.listen(5600);
-  
+app.use((error, req, res, next) => {
+  if (res.headerSent) {
+    return next(error);
+  }
+  res.status(error.code || 500);
+  res.json({ message: error.message || "An unknown error occurred!" });
+});
+
+app.listen(port, () => {
+  console.log(`Server listening on http://localhost:${port}`);
+});
