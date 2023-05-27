@@ -1,4 +1,4 @@
-Businesses to post events
+Businesses to post events 
 Businesses to authenticate ===DONE===
 Businesses to register  ===DONE===
 Businesses to add tickets (Tickets are linked to events)
@@ -7,7 +7,7 @@ Businesses to post news
 Businesses to create galleries
 Businesses to create guest lists, and add people to them (A guest list is linked to an event; people are linked to the guest list)
 Businesses to retrieve their past, future, and current events
-Businesses to update their business information ===DONE===
+Businesses to update their businessUser information ===DONE===
 Businesses to update their financial information ===DONE===
 Businesses to update their marketing information ===DONE===
 Providing information about orders and offering filtering options by event, ticket, etc.

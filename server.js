@@ -19,16 +19,13 @@ app.use(bodyParser.json());
 app.use("/api/", router);
 
 app.use((req, res, next) => {
-  const error = new HttpError("Could not find this route.", 404);
-  throw error;
+  return next(new HttpError("Could not find this route.", 404));
 });
 
 app.use((error, req, res, next) => {
-  if (res.headerSent) {
-    return next(error);
-  }
-  res.status(error.code || 500);
-  res.json({ message: error.message || "An unknown error occurred!" });
+  const statusCode = error.code || 500;
+  const message = error.message || "An unknown error occurred!";
+  res.status(statusCode).json({ message });
 });
 
 app.listen(port, () => {

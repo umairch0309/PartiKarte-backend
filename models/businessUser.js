@@ -2,24 +2,23 @@ import mongoose from "mongoose";
 import uniqueValidator from "mongoose-unique-validator";
 
 const addressSchema = new mongoose.Schema({
-  street: {
+  addressDescription: {
     type: String,
-    trim: true,
-  },
-  streetNumber: {
-    type: String,
-    trim: true,
+    required: true,
   },
   city: {
     type: String,
+    required: true,
     trim: true,
   },
   postalCode: {
     type: String,
+    required: true,
     trim: true,
   },
   country: {
     type: String,
+    required: true,
     trim: true,
   },
 });
@@ -145,22 +144,31 @@ const ticketSchema = new mongoose.Schema({
 const eventSchema = new mongoose.Schema({
   eventName: {
     type: String,
+    required: true,
     trim: true,
   },
   urlSlug: {
     type: String,
     trim: true,
+    required: true,
+  },
+  eventCategory: {
+    type: String,
+    required: true,
+  },
+  eventType: {
+    type: String,
+    required: true,
   },
   eventStart: {
     type: Date,
+    required: true,
   },
   eventEnd: {
     type: Date,
+    required: true,
   },
-  eventAddress: {
-    type: String,
-    trim: true,
-  },
+  eventAddress: addressSchema,
   eventCoordinatesX: {
     type: String,
   },
@@ -169,6 +177,7 @@ const eventSchema = new mongoose.Schema({
   },
   eventVenue: {
     type: String,
+    required: true,
   },
   eventDescription: {
     type: String,
@@ -176,6 +185,7 @@ const eventSchema = new mongoose.Schema({
   eventBanner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Image",
+    required: true,
   },
   featured: {
     type: Boolean,

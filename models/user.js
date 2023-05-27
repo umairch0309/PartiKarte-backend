@@ -1,0 +1,85 @@
+import mongoose from "mongoose";
+import uniqueValidator from "mongoose-unique-validator";
+
+const addressSchema = new mongoose.Schema({
+  addressDescription: {
+    type: String,
+    required: true,
+  },
+  city: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  postalCode: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  country: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+});
+
+const userSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    surname: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    DOB: {
+      type: Date,
+      required: true,
+    },
+    address: addressSchema,
+    IDFront: {
+      type: String,
+      required: true,
+    },
+
+    IDBack: {
+      type: String,
+      required: true,
+    },
+    role: {
+      type: String,
+      required: true,
+    },
+    urlSlug: {
+      type: String,
+      unique: true,
+      trim: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    salt: {
+      type: String,
+      required: true,
+    },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
+  },
+  { collection: "users" }
+);
+
+userSchema.plugin(uniqueValidator);
+
+const User = mongoose.model("User", userSchema);
+
+export default User;

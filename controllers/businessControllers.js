@@ -3,10 +3,11 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import businessUser from "../models/businessUser.js";
-import Image from "../models/eventImage.js";
+import Image from "../models/image.js";
 import path from "path";
+import fs from "fs";
 import { userSchema } from "../helpers/validation.js";
-import { generateUrlSlug } from "../helpers/helpers.js";
+import { generateUrlSlug, isImageFile } from "../helpers/helpers.js";
 
 import HttpError from "../helpers/HttpError.js";
 import { createValidationError } from "../helpers/HttpError.js";
@@ -27,6 +28,7 @@ export const register = async (req, res, next) => {
       companyName,
       companyVAT,
       companyRegistryNumber,
+      addressDescription,
       city,
       postalCode,
       country,
@@ -61,6 +63,7 @@ export const register = async (req, res, next) => {
         companyVAT,
         companyRegistryNumber,
         companyAddress: {
+          addressDescription,
           city,
           postalCode,
           country,
@@ -81,7 +84,10 @@ export const register = async (req, res, next) => {
     } else {
       console.log(error);
       return next(
-        new HttpError("Unexpected error occured while creating business", 500)
+        new HttpError(
+          "Unexpected error occured while creating businessUser",
+          500
+        )
       );
     }
   }
@@ -113,9 +119,9 @@ export const authenticate = async (req, res, next) => {
       expiresIn: "1h",
     });
 
-    res.status(200).json({ user, token });
+    res.status(200).json({ userId: user._id, token });
   } catch (error) {
-    return next(new HttpError(error.message, 400));
+    return next(new HttpError("Can't login due to server error", 500));
   }
 };
 
@@ -123,7 +129,7 @@ export const authenticate = async (req, res, next) => {
  * @method  updateBusinessInformation
  * @param {*} req
  * @param {*} res
- * @returns Updates business info
+ * @returns Updates businessUser info
  */
 export const updateBusinessInformation = async (req, res, next) => {
   const userId = req.userId;
@@ -185,7 +191,7 @@ export const updateBusinessInformation = async (req, res, next) => {
  * @method  updateBusinessContact
  * @param {*} req
  * @param {*} res
- * @returns Updates business contact
+ * @returns Updates businessUser contact
  */
 export const updateBusinessContact = async (req, res, next) => {
   const userId = req.userId;
@@ -214,7 +220,7 @@ export const updateBusinessContact = async (req, res, next) => {
  * @method  updateBusinessFinancialInformation
  * @param {*} req
  * @param {*} res
- * @returns Updates business financial information
+ * @returns Updates businessUser financial information
  */
 export const updateBusinessFinancialInformation = async (req, res, next) => {
   const userId = req.userId;
@@ -245,7 +251,7 @@ export const updateBusinessFinancialInformation = async (req, res, next) => {
  * @method  updateBusinessMarketingInformation
  * @param {*} req
  * @param {*} res
- * @returns Updates business marketing information
+ * @returns Updates businessUser marketing information
  */
 
 export const updateBusinessMarketingInformation = async (req, res, next) => {
@@ -266,7 +272,7 @@ export const updateBusinessMarketingInformation = async (req, res, next) => {
     const updatedUser = await user.save();
 
     res.status(200).json({
-      message: "Business settings updated",
+      message: "businessUser settings updated",
       updatedUser: updatedUser,
     });
   } catch (error) {
@@ -275,18 +281,10 @@ export const updateBusinessMarketingInformation = async (req, res, next) => {
 };
 
 /**
- * @method  for business/organizer-image" to be placed here
- * @param {*} req
- * @param {*} res
- * @returns Updates organizer image
- * working on it
- */
-
-/**
  * @method  addOrUpdateOwner
  * @param {*} req
  * @param {*} res
- * @returns Adds/Updates business owner information
+ * @returns Adds/Updates businessUser owner information
  */
 export const addOrUpdateOwner = async (req, res) => {
   const userId = req.userId;
@@ -309,7 +307,7 @@ export const addOrUpdateOwner = async (req, res) => {
 
     let owner;
     if (ownerId === "new") {
-      // Create a new business owner if it doesn't exist
+      // Create a new businessUser owner if it doesn't exist
       const newOwner = {
         ownerName,
         ownerSurname,
@@ -322,10 +320,10 @@ export const addOrUpdateOwner = async (req, res) => {
       user.owners.push(newOwner);
       owner = user.owners[user.owners.length - 1];
     } else {
-      // Update an existing business owner
+      // Update an existing businessUser owner
       owner = user.owners.id(ownerId);
       if (!owner) {
-        return res.status(404).json({ error: "Business owner not found" });
+        return res.status(404).json({ error: "businessUser owner not found" });
       }
 
       owner.set({
@@ -341,7 +339,7 @@ export const addOrUpdateOwner = async (req, res) => {
     await user.save();
     res
       .status(200)
-      .json({ message: "Business owner updated", ownerId: owner._id });
+      .json({ message: "businessUser owner updated", ownerId: owner._id });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -351,7 +349,7 @@ export const addOrUpdateOwner = async (req, res) => {
  * @method  getBusinessGallery
  * @param {*} req
  * @param {*} res
- * @returns business gallery
+ * @returns businessUser gallery
  */
 export const getBusinessGallery = async (req, res) => {
   const galleryId = req.params.galleryId;
@@ -460,7 +458,7 @@ export const createGallery = async (req, res) => {
  * @method  AddOrUpdateManager
  * @param {*} req
  * @param {*} res
- * @returns Add/Updates business manager information
+ * @returns Add/Updates businessUser manager information
  */
 export const AddOrUpdateManager = async (req, res) => {
   const userId = req.userId;
@@ -497,7 +495,9 @@ export const AddOrUpdateManager = async (req, res) => {
       const user = await User.findOne({ _id: userId });
       manager = user.managers.id(managerId);
       if (!manager) {
-        return res.status(404).json({ error: "Business manager not found" });
+        return res
+          .status(404)
+          .json({ error: "businessUser manager not found" });
       }
       manager.set({
         managerName,
@@ -510,9 +510,10 @@ export const AddOrUpdateManager = async (req, res) => {
       });
       await user.save();
     }
-    res
-      .status(200)
-      .json({ message: "Business manager updated", managerId: manager._id });
+    res.status(200).json({
+      message: "businessUser manager updated",
+      managerId: manager._id,
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -533,12 +534,12 @@ export const deleteOwner = async (req, res) => {
     const owner = user.owners.id(ownerId);
 
     if (!owner) {
-      return res.status(404).json({ error: "Business owner not found" });
+      return res.status(404).json({ error: "businessUser owner not found" });
     }
 
     user.owners.pull(owner);
     await user.save();
-    res.status(200).json({ message: "Business owner deleted" });
+    res.status(200).json({ message: "businessUser owner deleted" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -559,12 +560,12 @@ export const deleteManager = async (req, res) => {
     const manager = user.managers.id(managerId);
 
     if (!manager) {
-      return res.status(404).json({ error: "Business manager not found" });
+      return res.status(404).json({ error: "businessUser manager not found" });
     }
 
     user.managers.pull(manager);
     await user.save();
-    res.status(200).json({ message: "Business manager deleted" });
+    res.status(200).json({ message: "businessUser manager deleted" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -778,30 +779,32 @@ export const getOrganizerImage = async (req, res) => {
  * @returns updates organizer image according ot user id
  */
 
-export const updateOrganizerImage = async (req, res) => {
+export const updateOrganizerImage = async (req, res, next) => {
   const userId = req.userId;
 
   try {
-    // No optimization, use the original file path
-    const originalPath = req.file.path;
+    const user = await businessUser.findById(userId);
+    if (!user) {
+      return next(new HttpError("User not found", 404));
+    }
+
+    const fileBuffer = req.file.buffer;
+
+    // Check if the file is an image
+    await isImageFile(fileBuffer);
 
     const newImage = new Image({
       name: req.file.originalname,
-      filePath: originalPath,
+      filePath: req.file.path,
       contentType: req.file.mimetype,
     });
     await newImage.save();
     const organizerImage = newImage._id;
 
-    const user = await businessUser.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
     if (user.organizerImage) {
       const oldImage = await Image.findById(user.organizerImage);
       if (oldImage.filePath && fs.existsSync(oldImage.filePath)) {
-        fs.unlinkSync(oldImage.filePath);
+        await fs.promises.unlink(oldImage.filePath);
       }
       await Image.deleteOne({ _id: user.organizerImage });
     }
@@ -812,7 +815,7 @@ export const updateOrganizerImage = async (req, res) => {
     res.status(201).send({ id: newImage._id });
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server error");
+    return next(new HttpError("Server error", 500));
   }
 };
 
@@ -891,14 +894,14 @@ export const addOrUpdateNews = async (req, res) => {
     const { header, text } = req.body;
     const businessId = req.userId;
 
-    const business = await businessUser.findById(businessId);
-    if (!business) {
-      return res.status(404).send("Business not found");
+    const businessUser = await businessUser.findById(businessId);
+    if (!businessUser) {
+      return res.status(404).send("businessUser not found");
     }
 
     if (newsId) {
       // Update existing news
-      const news = business.news.id(newsId);
+      const news = businessUser.news.id(newsId);
       if (!news) {
         return res.status(404).send("News not found");
       }
@@ -911,7 +914,7 @@ export const addOrUpdateNews = async (req, res) => {
         news.text = text;
       }
 
-      await business.save();
+      await businessUser.save();
 
       res.status(200).send(news);
     } else {
@@ -921,8 +924,8 @@ export const addOrUpdateNews = async (req, res) => {
         text,
       };
 
-      business.news.push(newNews);
-      await business.save();
+      businessUser.news.push(newNews);
+      await businessUser.save();
 
       res.status(201).send(newNews);
     }
@@ -944,35 +947,36 @@ export const updateBusinessSocialDesc = async (req, res) => {
       req.body;
     const businessId = req.userId;
 
-    const business = await businessUser.findById(businessId);
-    if (!business) {
-      return res.status(404).send("Business not found");
+    const businessUser = await businessUser.findById(businessId);
+    if (!businessUser) {
+      return res.status(404).send("businessUser not found");
     }
 
     if (description) {
-      business.description = description;
+      businessUser.description = description;
     }
 
     if (facebook || instagram || website || twitter || other) {
-      business.socialLinks = {
-        facebook: facebook || business.socialLinks.facebook,
-        instagram: instagram || business.socialLinks.instagram,
-        website: website || business.socialLinks.website,
-        twitter: twitter || business.socialLinks.twitter,
-        other: other || business.socialLinks.other,
+      businessUser.socialLinks = {
+        facebook: facebook || businessUser.socialLinks.facebook,
+        instagram: instagram || businessUser.socialLinks.instagram,
+        website: website || businessUser.socialLinks.website,
+        twitter: twitter || businessUser.socialLinks.twitter,
+        other: other || businessUser.socialLinks.other,
       };
     }
 
-    await business.save();
+    await businessUser.save();
 
     res.status(200).send({
-      message: "Business description and social links updated successfully",
+      message: "businessUser description and social links updated successfully",
     });
   } catch (error) {
     res
       .status(500)
       .send(
-        "Error updating business description and social links: " + error.message
+        "Error updating businessUser description and social links: " +
+          error.message
       );
   }
 };
