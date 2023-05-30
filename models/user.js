@@ -4,7 +4,6 @@ import uniqueValidator from "mongoose-unique-validator";
 const addressSchema = new mongoose.Schema({
   addressDescription: {
     type: String,
-    required: true,
   },
   city: {
     type: String,
@@ -31,32 +30,36 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    username: {
+      type: String,
+      trim: true,
+    },
     name: {
       type: String,
-      required: true,
       trim: true,
     },
     surname: {
       type: String,
-      required: true,
       trim: true,
     },
     DOB: {
       type: Date,
-      required: true,
     },
     address: addressSchema,
     IDFront: {
       type: String,
-      required: true,
     },
 
     IDBack: {
       type: String,
-      required: true,
     },
     role: {
       type: String,
+      required: true,
+    },
+    business: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "business",
       required: true,
     },
     urlSlug: {

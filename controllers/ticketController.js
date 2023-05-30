@@ -1,4 +1,4 @@
-import businessUser from "../models/businessUser.js";
+import business from "../models/business.js";
 import ticketCode from "../models/ticketCode.js";
 import { calculatePriceWithVAT } from "../helpers/helpers.js";
 
@@ -13,9 +13,9 @@ export const getTicketById = async (req, res) => {
   try {
     const { businessId, eventId, ticketId } = req.params;
 
-    const user = await businessUser.findById(businessId);
+    const user = await business.findById(businessId);
     if (!user) {
-      return res.status(404).json({ message: "businessUser not found" });
+      return res.status(404).json({ message: "business not found" });
     }
 
     const event = user.events.id(eventId);
@@ -62,7 +62,7 @@ export const addOrUpdateTicket = async (req, res) => {
   const { vat, priceWithVAT } = calculatePriceWithVAT(price, vatPercentage);
 
   try {
-    const user = await businessUser.findById(userId);
+    const user = await business.findById(userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }

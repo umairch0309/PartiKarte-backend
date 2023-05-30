@@ -10,7 +10,7 @@ const router = express.Router();
 router.put("/event/:eventId/tickets/:ticketId", verifyToken, addOrUpdateTicket);
 
 router.get(
-  "/businessUser/:businessId/event/:eventId/tickets/:ticketId?",
+  "/business/:businessId/event/:eventId/tickets/:ticketId?",
   getTicketById
 );
 

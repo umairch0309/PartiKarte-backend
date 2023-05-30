@@ -4,7 +4,6 @@ import uniqueValidator from "mongoose-unique-validator";
 const addressSchema = new mongoose.Schema({
   addressDescription: {
     type: String,
-    required: true,
   },
   city: {
     type: String,
@@ -56,54 +55,9 @@ const newsSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  businessUser: {
+  business: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "businessUser",
-  },
-});
-
-const ownerSchema = new mongoose.Schema({
-  ownerName: {
-    type: String,
-    trim: true,
-  },
-  ownerSurname: {
-    type: String,
-    trim: true,
-  },
-  ownerDOB: {
-    type: Date,
-  },
-  ownerAddress: addressSchema,
-  ownerIDFront: {
-    type: String,
-  },
-  ownerIDBack: {
-    type: String,
-  },
-});
-
-const managerSchema = new mongoose.Schema({
-  managerName: {
-    type: String,
-    trim: true,
-  },
-  managerSurname: {
-    type: String,
-    trim: true,
-  },
-  managerDOB: {
-    type: Date,
-  },
-  managerAddress: addressSchema,
-  managerIDFront: {
-    type: String,
-  },
-  managerIDBack: {
-    type: String,
-  },
-  managerTitle: {
-    type: String,
+    ref: "business",
   },
 });
 
@@ -212,18 +166,6 @@ const businessUserSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
     organizerImage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Image",
@@ -232,14 +174,6 @@ const businessUserSchema = new mongoose.Schema(
       type: String,
       unique: true,
       trim: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    salt: {
-      type: String,
-      required: true,
     },
     galleries: [gallerySchema],
     news: [newsSchema],
@@ -286,8 +220,13 @@ const businessUserSchema = new mongoose.Schema(
         sparse: true,
       },
     },
-    owners: [ownerSchema],
-    managers: [managerSchema],
+    businessManagers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+    ],
     events: [eventSchema],
     certificate: certificateSchema,
     contactInformation: {
@@ -334,15 +273,12 @@ const businessUserSchema = new mongoose.Schema(
         trim: true,
       },
     },
-
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
   },
-  { collection: "businessUsers" }
+  { collection: "businesses" }
 );
 
 businessUserSchema.plugin(uniqueValidator);
 
-const businessUser = mongoose.model("businessUser", businessUserSchema);
+const business = mongoose.model("business", businessUserSchema);
 
-export default businessUser;
+export default business;

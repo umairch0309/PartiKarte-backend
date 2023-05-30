@@ -1,138 +1,22 @@
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-import businessUser from "../models/businessUser.js";
+import business from "../models/business.js";
 import Image from "../models/image.js";
 import path from "path";
 import fs from "fs";
-import { userSchema } from "../helpers/validation.js";
-import { generateUrlSlug, isImageFile } from "../helpers/helpers.js";
+import { isImageFile } from "../helpers/helpers.js";
 
 import HttpError from "../helpers/HttpError.js";
-import { createValidationError } from "../helpers/HttpError.js";
-
-/**
- * @method  register
- * @param {*} req
- * @param {*} res
- * @param {*} next
- * @returns registers user
- */
-export const register = async (req, res, next) => {
-  try {
-    const {
-      email,
-      username,
-      password,
-      companyName,
-      companyVAT,
-      companyRegistryNumber,
-      addressDescription,
-      city,
-      postalCode,
-      country,
-    } = req.body;
-
-    // Validate user input
-    const { error } = userSchema.validate({ email, username, password });
-    if (error) throw error;
-
-    // Check if user already exists
-    const existingUser = await businessUser.findOne({
-      $or: [{ email }, { username }],
-    });
-    if (existingUser) {
-      return next(new HttpError("Username or email already taken", 409));
-    }
-
-    // Hash the password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create a new businessUser instance
-    const user = new businessUser({
-      email,
-      username,
-      password: hashedPassword,
-      salt,
-      organizerName: username,
-      urlSlug: generateUrlSlug(username),
-      company: {
-        companyName,
-        companyVAT,
-        companyRegistryNumber,
-        companyAddress: {
-          addressDescription,
-          city,
-          postalCode,
-          country,
-        },
-      },
-    });
-
-    // Save the new user
-    await user.save();
-
-    res
-      .status(201)
-      .json({ message: "User created successfully", _id: user._id });
-  } catch (error) {
-    console.log(error);
-    if (error.name === "ValidationError") {
-      return next(createValidationError(error));
-    } else {
-      console.log(error);
-      return next(
-        new HttpError(
-          "Unexpected error occured while creating businessUser",
-          500
-        )
-      );
-    }
-  }
-};
-
-/**
- * @method authenticate
- * @param {*} req
- * @param {*} res
- * @returns authenticates user and returns user and auth token
- */
-export const authenticate = async (req, res, next) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return next(new HttpError("Please provide a username and password", 400));
-  }
-  try {
-    const user = await businessUser.findOne({ username });
-    if (!user) {
-      return next(new HttpError("Invalid username or password", 401));
-    }
-
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      return next(new HttpError("Invalid username or password", 401));
-    }
-
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-
-    res.status(200).json({ userId: user._id, token });
-  } catch (error) {
-    return next(new HttpError("Can't login due to server error", 500));
-  }
-};
 
 /**
  * @method  updateBusinessInformation
  * @param {*} req
  * @param {*} res
- * @returns Updates businessUser info
+ * @returns Updates business info
  */
 export const updateBusinessInformation = async (req, res, next) => {
-  const userId = req.userId;
+  const businessId = req.businessId;
   const {
     // organizerName,
     taxNumber,
@@ -142,9 +26,9 @@ export const updateBusinessInformation = async (req, res, next) => {
   } = req.body;
 
   try {
-    const user = await businessUser.findById(userId);
-    if (!user) {
-      return next(new HttpError("User not found", 404));
+    const mybusiness = await business.findById(businessId);
+    if (!mybusiness) {
+      return next(new HttpError("business not found", 404));
     }
 
     let update = {};
@@ -156,12 +40,12 @@ export const updateBusinessInformation = async (req, res, next) => {
     //   const dateString = new Date().toISOString().split("T")[0];
     //   const newUrlSlug = generateUrlSlug(organizerName, dateString);
 
-    //   const existingUserWithSlug = await businessUser.findOne({
+    //   const existingUserWithSlug = await business.findOne({
     //     urlSlug: newUrlSlug,
     //   });
     //   if (
     //     existingUserWithSlug &&
-    //     existingUserWithSlug._id.toString() !== userId
+    //     existingUserWithSlug._id.toString() !== businessId
     //   ) {
     //     return next(new HttpError("URL slug already exists", 409));
     //   }
@@ -175,7 +59,7 @@ export const updateBusinessInformation = async (req, res, next) => {
     if (companyRegistryNumber)
       update["company.companyRegistryNumber"] = companyRegistryNumber;
 
-    const updatedUser = await businessUser.findByIdAndUpdate(userId, {
+    const updatedUser = await business.findByIdAndUpdate(businessId, {
       $set: update,
     });
 
@@ -191,16 +75,16 @@ export const updateBusinessInformation = async (req, res, next) => {
  * @method  updateBusinessContact
  * @param {*} req
  * @param {*} res
- * @returns Updates businessUser contact
+ * @returns Updates business contact
  */
 export const updateBusinessContact = async (req, res, next) => {
-  const userId = req.userId;
+  const businessId = req.businessId;
   const { email, phoneNumber, website } = req.body;
 
   try {
-    const user = await businessUser.findById(userId);
-    if (!user) {
-      throw new HttpError("User not found", 404);
+    const mybusiness = await business.findById(businessId);
+    if (!mybusiness) {
+      throw new HttpError("business not found", 404);
     }
 
     let update = {};
@@ -208,7 +92,7 @@ export const updateBusinessContact = async (req, res, next) => {
     if (phoneNumber) update["contactInformation.phoneNumber"] = phoneNumber;
     if (website) update["contactInformation.website"] = website;
 
-    await businessUser.findByIdAndUpdate(userId, { $set: update });
+    await business.findByIdAndUpdate(businessId, { $set: update });
 
     res.status(200).json({ message: "Contact information updated" });
   } catch (error) {
@@ -220,27 +104,27 @@ export const updateBusinessContact = async (req, res, next) => {
  * @method  updateBusinessFinancialInformation
  * @param {*} req
  * @param {*} res
- * @returns Updates businessUser financial information
+ * @returns Updates business financial information
  */
 export const updateBusinessFinancialInformation = async (req, res, next) => {
-  const userId = req.userId;
+  const businessId = req.businessId;
   const { IBAN, accountName, invoiceEmail } = req.body;
 
   try {
-    const user = await businessUser.findById(userId);
-    if (!user) {
-      throw new HttpError("User not found", 404);
+    const mybusiness = await business.findById(businessId);
+    if (!mybusiness) {
+      throw new HttpError("mybusiness not found", 404);
     }
 
-    user.financialInformation.IBAN = IBAN;
-    user.financialInformation.accountName = accountName;
-    user.financialInformation.invoiceEmail = invoiceEmail;
+    mybusiness.financialInformation.IBAN = IBAN;
+    mybusiness.financialInformation.accountName = accountName;
+    mybusiness.financialInformation.invoiceEmail = invoiceEmail;
 
-    const updatedUser = await user.save();
+    const updatedBusiness = await mybusiness.save();
 
     res.status(200).json({
       message: "Financial information updated",
-      updatedUser: updatedUser.financialInformation,
+      updatedBusiness: updatedBusiness.financialInformation,
     });
   } catch (error) {
     next(new HttpError(error.message, 400));
@@ -251,29 +135,31 @@ export const updateBusinessFinancialInformation = async (req, res, next) => {
  * @method  updateBusinessMarketingInformation
  * @param {*} req
  * @param {*} res
- * @returns Updates businessUser marketing information
+ * @returns Updates business marketing information
  */
 
 export const updateBusinessMarketingInformation = async (req, res, next) => {
-  const userId = req.userId;
+  const businessId = req.businessId;
   const { metaPixelId, googleAnalyticsId, apiAccessKey } = req.body;
 
   try {
-    const user = await businessUser.findById(userId);
-    if (!user) {
-      throw new HttpError("User not found", 404);
+    const mybusiness = await business.findById(businessId);
+    if (!mybusiness) {
+      throw new HttpError("mybusiness not found", 404);
     }
 
-    user.marketingInformation.metaPixelId = metaPixelId || user.metaPixelId;
-    user.marketingInformation.googleAnalyticsId =
-      googleAnalyticsId || user.googleAnalyticsId;
-    user.marketingInformation.apiAccessKey = apiAccessKey || user.apiAccessKey;
+    mybusiness.marketingInformation.metaPixelId =
+      metaPixelId || mybusiness.metaPixelId;
+    mybusiness.marketingInformation.googleAnalyticsId =
+      googleAnalyticsId || mybusiness.googleAnalyticsId;
+    mybusiness.marketingInformation.apiAccessKey =
+      apiAccessKey || mybu.apiAccessKey;
 
-    const updatedUser = await user.save();
+    const updatedBusiness = await mybusiness.save();
 
     res.status(200).json({
-      message: "businessUser settings updated",
-      updatedUser: updatedUser,
+      message: "business settings updated",
+      updatedBusiness: updatedBusiness,
     });
   } catch (error) {
     next(new HttpError(error.message, 400));
@@ -284,7 +170,7 @@ export const updateBusinessMarketingInformation = async (req, res, next) => {
  * @method  addOrUpdateOwner
  * @param {*} req
  * @param {*} res
- * @returns Adds/Updates businessUser owner information
+ * @returns Adds/Updates business owner information
  */
 export const addOrUpdateOwner = async (req, res) => {
   const userId = req.userId;
@@ -300,14 +186,14 @@ export const addOrUpdateOwner = async (req, res) => {
   } = req.body;
 
   try {
-    const user = await businessUser.findById(userId);
+    const user = await business.findById(userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
     let owner;
     if (ownerId === "new") {
-      // Create a new businessUser owner if it doesn't exist
+      // Create a new business owner if it doesn't exist
       const newOwner = {
         ownerName,
         ownerSurname,
@@ -320,10 +206,10 @@ export const addOrUpdateOwner = async (req, res) => {
       user.owners.push(newOwner);
       owner = user.owners[user.owners.length - 1];
     } else {
-      // Update an existing businessUser owner
+      // Update an existing business owner
       owner = user.owners.id(ownerId);
       if (!owner) {
-        return res.status(404).json({ error: "businessUser owner not found" });
+        return res.status(404).json({ error: "business owner not found" });
       }
 
       owner.set({
@@ -339,7 +225,7 @@ export const addOrUpdateOwner = async (req, res) => {
     await user.save();
     res
       .status(200)
-      .json({ message: "businessUser owner updated", ownerId: owner._id });
+      .json({ message: "business owner updated", ownerId: owner._id });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -349,13 +235,13 @@ export const addOrUpdateOwner = async (req, res) => {
  * @method  getBusinessGallery
  * @param {*} req
  * @param {*} res
- * @returns businessUser gallery
+ * @returns business gallery
  */
 export const getBusinessGallery = async (req, res) => {
   const galleryId = req.params.galleryId;
 
   try {
-    const user = await businessUser.findOne({ "galleries._id": galleryId });
+    const user = await business.findOne({ "galleries._id": galleryId });
     if (!user) {
       return res.status(404).send("Gallery not found");
     }
@@ -413,7 +299,7 @@ export const createGallery = async (req, res) => {
     if (!galleryName) {
       return res.status(400).json({ error: "Gallery name is required" });
     }
-    const user = await businessUser.findById(userId);
+    const user = await business.findById(userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -458,7 +344,7 @@ export const createGallery = async (req, res) => {
  * @method  AddOrUpdateManager
  * @param {*} req
  * @param {*} res
- * @returns Add/Updates businessUser manager information
+ * @returns Add/Updates business manager information
  */
 export const AddOrUpdateManager = async (req, res) => {
   const userId = req.userId;
@@ -487,7 +373,7 @@ export const AddOrUpdateManager = async (req, res) => {
         managerTitle,
       };
 
-      const user = await businessUser.findOne({ _id: userId });
+      const user = await business.findOne({ _id: userId });
       user.managers.push(newManager);
       await user.save();
       manager = user.managers[user.managers.length - 1];
@@ -495,9 +381,7 @@ export const AddOrUpdateManager = async (req, res) => {
       const user = await User.findOne({ _id: userId });
       manager = user.managers.id(managerId);
       if (!manager) {
-        return res
-          .status(404)
-          .json({ error: "businessUser manager not found" });
+        return res.status(404).json({ error: "business manager not found" });
       }
       manager.set({
         managerName,
@@ -511,7 +395,7 @@ export const AddOrUpdateManager = async (req, res) => {
       await user.save();
     }
     res.status(200).json({
-      message: "businessUser manager updated",
+      message: "business manager updated",
       managerId: manager._id,
     });
   } catch (error) {
@@ -530,16 +414,16 @@ export const deleteOwner = async (req, res) => {
   const ownerId = req.params.id;
 
   try {
-    const user = await businessUser.findOne({ _id: userId });
+    const user = await business.findOne({ _id: userId });
     const owner = user.owners.id(ownerId);
 
     if (!owner) {
-      return res.status(404).json({ error: "businessUser owner not found" });
+      return res.status(404).json({ error: "business owner not found" });
     }
 
     user.owners.pull(owner);
     await user.save();
-    res.status(200).json({ message: "businessUser owner deleted" });
+    res.status(200).json({ message: "business owner deleted" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -556,16 +440,16 @@ export const deleteManager = async (req, res) => {
   const managerId = req.params.id;
 
   try {
-    const user = await businessUser.findOne({ _id: userId });
+    const user = await business.findOne({ _id: userId });
     const manager = user.managers.id(managerId);
 
     if (!manager) {
-      return res.status(404).json({ error: "businessUser manager not found" });
+      return res.status(404).json({ error: "business manager not found" });
     }
 
     user.managers.pull(manager);
     await user.save();
-    res.status(200).json({ message: "businessUser manager deleted" });
+    res.status(200).json({ message: "business manager deleted" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -583,7 +467,7 @@ export const updateUserName = async (req, res) => {
   const { newUsername } = req.body;
 
   try {
-    const user = await businessUser.findByIdAndUpdate(
+    const user = await business.findByIdAndUpdate(
       userId,
       { username: newUsername },
       { new: true }
@@ -615,7 +499,7 @@ export const updatePassword = async (req, res) => {
   try {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
-    const user = await businessUser.findByIdAndUpdate(
+    const user = await business.findByIdAndUpdate(
       userId,
       { password: hashedPassword },
       { new: true }
@@ -643,7 +527,7 @@ export const requestResetPassword = async (req, res) => {
 
   try {
     const token = crypto.randomBytes(20).toString("hex");
-    const user = await businessUser.findOneAndUpdate(
+    const user = await business.findOneAndUpdate(
       { email },
       { resetPasswordToken: token, resetPasswordExpires: Date.now() + 3600000 },
       { new: true }
@@ -696,7 +580,7 @@ export const resetPassword = async (req, res) => {
   const { token } = req.params;
 
   try {
-    const user = await businessUser.findOne({
+    const user = await business.findOne({
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: Date.now() },
     });
@@ -732,7 +616,7 @@ export const updateEmail = async (req, res) => {
   const { newEmail } = req.body;
 
   try {
-    const user = await businessUser.findByIdAndUpdate(
+    const user = await business.findByIdAndUpdate(
       userId,
       { email: newEmail },
       { new: true }
@@ -783,7 +667,7 @@ export const updateOrganizerImage = async (req, res, next) => {
   const userId = req.userId;
 
   try {
-    const user = await businessUser.findById(userId);
+    const user = await business.findById(userId);
     if (!user) {
       return next(new HttpError("User not found", 404));
     }
@@ -833,7 +717,7 @@ export const getOrganizersBySlug = async (req, res) => {
     let businessUsers;
 
     if (urlSlug) {
-      const organizer = await businessUser
+      const organizer = await business
         .findOne({ urlSlug: urlSlug })
         .populate("organizerImage news events");
       if (!organizer) {
@@ -841,7 +725,7 @@ export const getOrganizersBySlug = async (req, res) => {
       }
       businessUsers = [organizer];
     } else {
-      businessUsers = await businessUser
+      businessUsers = await business
         .find({})
         .populate("organizerImage news events");
     }
@@ -894,14 +778,14 @@ export const addOrUpdateNews = async (req, res) => {
     const { header, text } = req.body;
     const businessId = req.userId;
 
-    const businessUser = await businessUser.findById(businessId);
-    if (!businessUser) {
-      return res.status(404).send("businessUser not found");
+    const business = await business.findById(businessId);
+    if (!business) {
+      return res.status(404).send("business not found");
     }
 
     if (newsId) {
       // Update existing news
-      const news = businessUser.news.id(newsId);
+      const news = business.news.id(newsId);
       if (!news) {
         return res.status(404).send("News not found");
       }
@@ -914,7 +798,7 @@ export const addOrUpdateNews = async (req, res) => {
         news.text = text;
       }
 
-      await businessUser.save();
+      await business.save();
 
       res.status(200).send(news);
     } else {
@@ -924,8 +808,8 @@ export const addOrUpdateNews = async (req, res) => {
         text,
       };
 
-      businessUser.news.push(newNews);
-      await businessUser.save();
+      business.news.push(newNews);
+      await business.save();
 
       res.status(201).send(newNews);
     }
@@ -947,36 +831,35 @@ export const updateBusinessSocialDesc = async (req, res) => {
       req.body;
     const businessId = req.userId;
 
-    const businessUser = await businessUser.findById(businessId);
-    if (!businessUser) {
-      return res.status(404).send("businessUser not found");
+    const business = await business.findById(businessId);
+    if (!business) {
+      return res.status(404).send("business not found");
     }
 
     if (description) {
-      businessUser.description = description;
+      business.description = description;
     }
 
     if (facebook || instagram || website || twitter || other) {
-      businessUser.socialLinks = {
-        facebook: facebook || businessUser.socialLinks.facebook,
-        instagram: instagram || businessUser.socialLinks.instagram,
-        website: website || businessUser.socialLinks.website,
-        twitter: twitter || businessUser.socialLinks.twitter,
-        other: other || businessUser.socialLinks.other,
+      business.socialLinks = {
+        facebook: facebook || business.socialLinks.facebook,
+        instagram: instagram || business.socialLinks.instagram,
+        website: website || business.socialLinks.website,
+        twitter: twitter || business.socialLinks.twitter,
+        other: other || business.socialLinks.other,
       };
     }
 
-    await businessUser.save();
+    await business.save();
 
     res.status(200).send({
-      message: "businessUser description and social links updated successfully",
+      message: "business description and social links updated successfully",
     });
   } catch (error) {
     res
       .status(500)
       .send(
-        "Error updating businessUser description and social links: " +
-          error.message
+        "Error updating business description and social links: " + error.message
       );
   }
 };

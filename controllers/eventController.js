@@ -1,4 +1,4 @@
-import businessUser from "../models/businessUser.js";
+import business from "../models/business.js";
 import ticketCode from "../models/ticketCode.js";
 import Image from "../models/image.js";
 import path from "path";
@@ -61,7 +61,7 @@ export const addorUpdateEvent = async (req, res) => {
         urlSlug: generateUrlSlug(eventName, eventStartDate),
       };
 
-      const user = await businessUser.findOne({ _id: userId });
+      const user = await business.findOne({ _id: userId });
       user.events.push(newEvent);
       await user.save();
       event = user.events[user.events.length - 1];
@@ -73,7 +73,7 @@ export const addorUpdateEvent = async (req, res) => {
       res.status(200).json({ message: "Event created", eventId: event._id });
     } else {
       // Update an existing event
-      const user = await businessUser.findOne({ _id: userId });
+      const user = await business.findOne({ _id: userId });
       event = user.events.id(eventId);
       if (!event) {
         return next(new HttpError("Event not found", 404));
@@ -125,7 +125,7 @@ export const changeEventImage = async (req, res, next) => {
     await newImage.save();
     let eventBanner = newImage._id;
 
-    const user = await businessUser.findOne({ _id: userId });
+    const user = await business.findOne({ _id: userId });
 
     let event = user.events.id(eventId);
     if (!event) {
@@ -154,7 +154,7 @@ export const deleteEvent = async (req, res) => {
   const userId = req.userId;
   const eventId = req.params.id;
   try {
-    const user = await businessUser.findOne({
+    const user = await business.findOne({
       _id: userId,
       "events._id": eventId,
     });
@@ -174,7 +174,7 @@ export const deleteEvent = async (req, res) => {
 export const searchEvents = async (req, res) => {
   try {
     const { currentTime, featured, urlSlug } = req.body;
-    const businessUsers = await businessUser
+    const businessUsers = await business
       .find({})
       .populate("events.eventBanner");
 
