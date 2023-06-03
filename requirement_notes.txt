@@ -1,4 +1,4 @@
-Businesses to post events 
+Businesses to post events ===DONE===
 Businesses to authenticate ===DONE===
 Businesses to register  ===DONE===
 Businesses to add tickets (Tickets are linked to events)
@@ -6,13 +6,13 @@ Businesses to add cover photos
 Businesses to post news
 Businesses to create galleries
 Businesses to create guest lists, and add people to them (A guest list is linked to an event; people are linked to the guest list)
-Businesses to retrieve their past, future, and current events
+Businesses to retrieve their past, future, and current events ===DONE===
 Businesses to update their business information ===DONE===
 Businesses to update their financial information ===DONE===
 Businesses to update their marketing information ===DONE===
 Providing information about orders and offering filtering options by event, ticket, etc.
 Providing information about guest lists
-Managing members: adding a member by email, name, surname, date of birth, and ID picture (front and back), as well as their role in the company
+Managing members: adding a member by email, name, surname, date of birth, and ID picture (front and back), as well as their role in the company ===DONE===
 Offering the option to refund tickets
 We need a system for creating orders. The frontend sends ticket IDs and their tokens that are connected to Bankart. The order is stored as incomplete until the Bankart API sends a payment verification (3DSecure). When the purchase is confirmed, the ticket ID (for example, 1324523) is generated and stored in the database of events where all the tickets and IDs of those tickets are stored. The user receives a PDF of the ticket with a QR code of the ticket. The orders and tickets will be stored. Each event gets its 5-digit code.
 
@@ -26,8 +26,8 @@ Additional APIs:
 
 
 
-API to get all events
-API to get detailed information about events and their tickets
+API to get all events ===DONE===
+API to get detailed information about events and their tickets ===DONE===
 API to retrieve data about posts, such as privacy-policy
 API to retrieve folders and posts in those folders
 API to contact info@partikarte.si

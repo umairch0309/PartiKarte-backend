@@ -1,13 +1,13 @@
-import bcrypt from "bcrypt";
-import nodemailer from "nodemailer";
-import crypto from "crypto";
 import business from "../models/business.js";
 import Image from "../models/image.js";
 import path from "path";
 import fs from "fs";
 import { isImageFile } from "../helpers/helpers.js";
 
-import HttpError from "../helpers/HttpError.js";
+import HttpError, { ServerError } from "../helpers/HttpError.js";
+import { findBusinessAndUser } from "../DAL/common.js";
+import Business from "../models/business.js";
+import User from "../models/user.js";
 
 /**
  * @method  updateBusinessInformation
@@ -16,7 +16,7 @@ import HttpError from "../helpers/HttpError.js";
  * @returns Updates business info
  */
 export const updateBusinessInformation = async (req, res, next) => {
-  const businessId = req.businessId;
+  const userId = req.userId;
   const {
     // organizerName,
     taxNumber,
@@ -26,9 +26,9 @@ export const updateBusinessInformation = async (req, res, next) => {
   } = req.body;
 
   try {
-    const mybusiness = await business.findById(businessId);
-    if (!mybusiness) {
-      return next(new HttpError("business not found", 404));
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid user id", 400));
     }
 
     let update = {};
@@ -59,15 +59,20 @@ export const updateBusinessInformation = async (req, res, next) => {
     if (companyRegistryNumber)
       update["company.companyRegistryNumber"] = companyRegistryNumber;
 
-    const updatedUser = await business.findByIdAndUpdate(businessId, {
+    const updatedBusiness = await Business.findByIdAndUpdate(business._id, {
       $set: update,
     });
 
-    res
-      .status(200)
-      .json({ message: "Company information updated", updatedUser });
+    if (!updatedBusiness) {
+      return next(new HttpError("Could not update", 400));
+    }
+
+    res.status(200).json({
+      message: "Company information updated",
+      updatedBusiness: updatedBusiness.company,
+    });
   } catch (error) {
-    next(new HttpError(error.message, 400));
+    return next(new HttpError(error.message, 400));
   }
 };
 
@@ -78,13 +83,13 @@ export const updateBusinessInformation = async (req, res, next) => {
  * @returns Updates business contact
  */
 export const updateBusinessContact = async (req, res, next) => {
-  const businessId = req.businessId;
+  const userId = req.userId;
   const { email, phoneNumber, website } = req.body;
 
   try {
-    const mybusiness = await business.findById(businessId);
-    if (!mybusiness) {
-      throw new HttpError("business not found", 404);
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      throw new HttpError("Invalid Id", 404);
     }
 
     let update = {};
@@ -92,11 +97,20 @@ export const updateBusinessContact = async (req, res, next) => {
     if (phoneNumber) update["contactInformation.phoneNumber"] = phoneNumber;
     if (website) update["contactInformation.website"] = website;
 
-    await business.findByIdAndUpdate(businessId, { $set: update });
+    const updateBusiness = await Business.findByIdAndUpdate(business._id, {
+      $set: update,
+    });
 
-    res.status(200).json({ message: "Contact information updated" });
+    if (!updateBusiness) {
+      return next(new HttpError("Couldn't change!", 500));
+    }
+
+    res.status(200).json({
+      message: "Contact information updated",
+      updateBusiness: updateBusiness.contactInformation,
+    });
   } catch (error) {
-    next(new HttpError(error.message, 400));
+    return next(ServerError(error));
   }
 };
 
@@ -107,14 +121,16 @@ export const updateBusinessContact = async (req, res, next) => {
  * @returns Updates business financial information
  */
 export const updateBusinessFinancialInformation = async (req, res, next) => {
-  const businessId = req.businessId;
+  const userId = req.userId;
   const { IBAN, accountName, invoiceEmail } = req.body;
 
   try {
-    const mybusiness = await business.findById(businessId);
-    if (!mybusiness) {
-      throw new HttpError("mybusiness not found", 404);
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 404));
     }
+
+    const mybusiness = await Business.findById(business._id);
 
     mybusiness.financialInformation.IBAN = IBAN;
     mybusiness.financialInformation.accountName = accountName;
@@ -139,27 +155,59 @@ export const updateBusinessFinancialInformation = async (req, res, next) => {
  */
 
 export const updateBusinessMarketingInformation = async (req, res, next) => {
-  const businessId = req.businessId;
+  const userId = req.userId;
   const { metaPixelId, googleAnalyticsId, apiAccessKey } = req.body;
 
   try {
-    const mybusiness = await business.findById(businessId);
-    if (!mybusiness) {
-      throw new HttpError("mybusiness not found", 404);
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 404));
     }
 
-    mybusiness.marketingInformation.metaPixelId =
-      metaPixelId || mybusiness.metaPixelId;
-    mybusiness.marketingInformation.googleAnalyticsId =
-      googleAnalyticsId || mybusiness.googleAnalyticsId;
-    mybusiness.marketingInformation.apiAccessKey =
-      apiAccessKey || mybu.apiAccessKey;
+    const mybusiness = await Business.findById(business._id);
+
+    mybusiness.marketingInformation.metaPixelId = metaPixelId;
+    mybusiness.marketingInformation.googleAnalyticsId = googleAnalyticsId;
+    mybusiness.marketingInformation.apiAccessKey = apiAccessKey;
 
     const updatedBusiness = await mybusiness.save();
 
     res.status(200).json({
       message: "business settings updated",
-      updatedBusiness: updatedBusiness,
+      updatedBusiness: updatedBusiness.marketingInformation,
+    });
+  } catch (error) {
+    next(new HttpError(error.message, 400));
+  }
+};
+
+/**
+ * @method  updateProfile
+ * @param {*} req
+ * @param {*} res
+ * @returns Updates account profile information
+ */
+
+export const updateProfile = async (req, res, next) => {
+  const userId = req.userId;
+  const { username, email } = req.body;
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 404));
+    }
+
+    const myUser = await User.findById(user._id);
+
+    myUser.email = email;
+    myUser.username = username;
+
+    const updatedUser = await myUser.save();
+
+    res.status(200).json({
+      message: "business settings updated",
+      updatedUser,
     });
   } catch (error) {
     next(new HttpError(error.message, 400));
@@ -482,125 +530,6 @@ export const updateUserName = async (req, res) => {
       .json({ message: "Username updated", username: user.username });
   } catch (error) {
     res.status(400).json({ error: error.message });
-  }
-};
-
-/**
- * @method  updatePassword
- * @param {*} req
- * @param {*} res
- * @returns Changes password
- * need to be merged 1
- */
-export const updatePassword = async (req, res) => {
-  const userId = req.userId;
-  const { newPassword } = req.body;
-
-  try {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-    const user = await business.findByIdAndUpdate(
-      userId,
-      { password: hashedPassword },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.status(200).json({ message: "Password updated" });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-/**
- * @method  requestResetPassword
- * @param {*} req
- * @param {*} res
- * @returns  reset password link is sent to email of the user including token to reset
- */
-
-export const requestResetPassword = async (req, res) => {
-  const { email } = req.body;
-
-  try {
-    const token = crypto.randomBytes(20).toString("hex");
-    const user = await business.findOneAndUpdate(
-      { email },
-      { resetPasswordToken: token, resetPasswordExpires: Date.now() + 3600000 },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: "mcp-5.controlpanel.si",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Reset Password Request",
-      text: `To reset your password, click the following link or paste it into your browser (expires in 1 hour):\n
-        http://127.0.0.1:4000/users/reset-password/${token}\n`,
-    };
-
-    transporter.sendMail(mailOptions, (error) => {
-      if (error) {
-        console.error(error);
-        return res.status(500).send("Server error");
-      }
-      res.status(200).json({ message: "Email sent" });
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server error");
-  }
-};
-
-/**
- * @method  resetPassword
- * @param {*} req
- * @param {*} res
- * @returns password is reset on the basis of token and password received
- */
-
-export const resetPassword = async (req, res) => {
-  const { password } = req.body;
-  const { token } = req.params;
-
-  try {
-    const user = await business.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return res.status(400).json({ error: "Invalid or expired token" });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    user.password = hashedPassword;
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-    await user.save();
-
-    res.status(200).json({ message: "Password updated" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server error");
   }
 };
 

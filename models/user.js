@@ -45,6 +45,9 @@ const userSchema = new mongoose.Schema(
     DOB: {
       type: Date,
     },
+    profile_image: {
+      type: String,
+    },
     address: addressSchema,
     IDFront: {
       type: String,
@@ -57,9 +60,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    business: {
+    businessId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "business",
+      ref: "Business",
       required: true,
     },
     urlSlug: {

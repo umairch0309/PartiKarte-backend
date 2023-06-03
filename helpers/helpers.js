@@ -18,7 +18,7 @@ export function calculatePriceWithVAT(price, vatPercentage) {
   return { vat, priceWithVAT };
 }
 
-export const isImageFile = async (type) => {
+export const isImageFile = async (type, next) => {
   const isImage = type.startsWith("image/");
 
   if (!isImage) {

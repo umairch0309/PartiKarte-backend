@@ -1,24 +1,22 @@
 import express from "express";
-import bodyParser from "body-parser";
-import dotenv from "dotenv";
 import { upload } from "../helpers/multerConfig.js";
 import verifyToken from "../middlewares/verifyToken.js";
 
 import {
-  addorUpdateEvent,
-  changeEventImage,
+  createNewEvent,
   deleteEvent,
-  searchEvents,
-  getEventBanner,
-} from "../controllers/eventController.js";
-
-dotenv.config();
+  updateEvent,
+  getAllEvents,
+  changeEventImage,
+} from "../controllers/eventControllers.js";
 
 const router = express.Router();
-router.use(bodyParser.json());
+
+router.get("/events", verifyToken, getAllEvents);
 
 // Create event
-router.put("/events/:id", verifyToken, addorUpdateEvent);
+router.post("/events/new-event", verifyToken, createNewEvent);
+router.put("/events/update-event/:eventId", verifyToken, updateEvent);
 
 router.put(
   "/events/:eventId/upload-image",
@@ -28,10 +26,6 @@ router.put(
 );
 
 // Delete event
-router.delete("/events/:id", verifyToken, deleteEvent);
-
-router.post("/events/search", searchEvents);
-
-router.get("/events/eventBanner/:id", getEventBanner);
+router.delete("/events/delete/:id", verifyToken, deleteEvent);
 
 export { router as events };

@@ -9,3 +9,8 @@ export const createValidationError = (error) => {
   const errorMessages = Object.values(error.errors).map((err) => err.message);
   return new HttpError(errorMessages, 409);
 };
+
+export const ServerError = (error) => {
+  console.log(error);
+  return new HttpError("Server error", 500);
+};
