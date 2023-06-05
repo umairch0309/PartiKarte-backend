@@ -25,33 +25,48 @@ const ticketSchema = new mongoose.Schema({
   ticketName: {
     type: String,
     trim: true,
+    required: true,
   },
-  dateStart: {
+  validFrom: {
     type: Date,
+    required: true,
   },
-  dateEnd: {
+  validTo: {
     type: Date,
+    required: true,
   },
   maxCapacity: {
     type: Number,
+    required: true,
+  },
+  capacityLimitation: {
+    type: String,
+    enum: ["limited", "unlimited"],
+    required: true,
   },
   price: {
     type: Number,
+    required: true,
   },
   vatPercentage: {
     type: Number,
+    required: true,
   },
   vat: {
     type: Number,
+    required: true,
   },
   priceWithVAT: {
     type: Number,
+    required: true,
   },
-  description: {
+  descriptionWeb: {
     type: String,
+    required: true,
   },
-  inventory: {
-    type: Number,
+  descriptionTicket: {
+    type: String,
+    required: true,
   },
 });
 
@@ -107,6 +122,7 @@ const eventSchema = new mongoose.Schema({
   businessId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Business",
+    required: true,
   },
   tickets: [ticketSchema],
 });

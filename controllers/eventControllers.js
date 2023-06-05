@@ -1,19 +1,12 @@
 import business from "../models/business.js";
-import mongoose from "mongoose";
-const { ObjectId } = mongoose.Types;
-import ticketCode from "../models/ticketCode.js";
 import Image from "../models/image.js";
-import path from "path";
 import fs from "fs";
-import {
-  preprocessImage,
-  isImageFile,
-  generateUrlSlug,
-} from "../helpers/helpers.js";
+import { preprocessImage, isImageFile } from "../helpers/helpers.js";
 import HttpError, { ServerError } from "../helpers/HttpError.js";
-import Business from "../models/business.js";
 import { findBusinessAndUser } from "../DAL/common.js";
 import Event from "../models/event.js";
+import Business from "../models/business.js";
+import mongoose from "mongoose";
 
 export const getAllEvents = async (req, res, next) => {
   const userId = req.userId;
@@ -24,7 +17,7 @@ export const getAllEvents = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    const events = await Event.find();
+    const events = await Event.find({ businessId: business._id });
 
     res.status(200).json({ events });
   } catch (error) {
@@ -52,9 +45,17 @@ export const createNewEvent = async (req, res, next) => {
 
   const [eventBanner] = req.files;
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
-    if (!user || !business) {
+    const myBusiness = await Business.findById(user.businessId).session(
+      session
+    );
+    if (!user || !business || !myBusiness) {
+      await session.abortTransaction();
+      session.endSession();
       return next(new HttpError("Invalid id", 400));
     }
 
@@ -80,17 +81,27 @@ export const createNewEvent = async (req, res, next) => {
       eventCoordinatesY,
       eventVenue,
       eventDescription,
+      businessId: myBusiness._id,
     });
 
     console.log(newEvent);
-    const savedEvent = await newEvent.save();
+    const savedEvent = await newEvent.save({ session });
+
+    myBusiness.events.push(savedEvent._id);
+    await myBusiness.save({ session });
 
     if (!savedEvent) {
+      await session.abortTransaction();
+      session.endSession();
       return next(new HttpError("Could not create event", 500));
     }
 
+    await session.commitTransaction();
+    session.endSession();
     res.status(200).json({ message: "Event created", event: savedEvent });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     return next(ServerError(error));
   }
 };
@@ -216,16 +227,38 @@ export const changeEventImage = async (req, res, next) => {
 export const deleteEvent = async (req, res, next) => {
   const userId = req.userId;
   const eventId = req.params.id;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
-    if (!user || !business) {
+    const myBusiness = await Business.findById(user.businessId).session(
+      session
+    );
+    if (!user || !business || !myBusiness) {
+      await session.abortTransaction();
+      session.endSession();
       return next(new HttpError("Invalid id", 400));
     }
+    const deletedEvent = await Event.findByIdAndDelete(eventId, { session });
+    myBusiness.events = myBusiness.events.filter(
+      (event) => event.toString() !== deletedEvent._id.toString()
+    );
 
-    const deletedEvent = await Event.findByIdAndDelete(eventId);
+    await myBusiness.save({ session });
 
+    if (!deletedEvent) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new HttpError("Invalid event id", 400));
+    }
+
+    await session.commitTransaction();
+    session.endSession();
     res.status(200).json({ message: "Event deleted", event: deletedEvent });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     return next(new HttpError(error.message, 500));
   }
 };

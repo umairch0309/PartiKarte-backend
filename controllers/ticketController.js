@@ -1,139 +1,174 @@
-import business from "../models/business.js";
-import ticketCode from "../models/ticketCode.js";
 import { calculatePriceWithVAT } from "../helpers/helpers.js";
+import { findBusinessAndUser } from "../DAL/common.js";
+import HttpError, { ServerError } from "../helpers/HttpError.js";
+import Event from "../models/event.js";
 
-/**
- * @method  getTicketById
- * @param {*} req
- * @param {*} res
- * @param {*} next
- * @returns gets ticket by Ticket Id
- */
-export const getTicketById = async (req, res) => {
+export const getAllTickets = async (req, res, next) => {
+  const userId = req.userId;
+  const eventId = req.params.eventId;
+
   try {
-    const { businessId, eventId, ticketId } = req.params;
-
-    const user = await business.findById(businessId);
-    if (!user) {
-      return res.status(404).json({ message: "business not found" });
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
     }
 
-    const event = user.events.id(eventId);
+    const event = await Event.findById(eventId);
     if (!event) {
-      return res.status(404).json({ message: "Event not found" });
+      return next(new HttpError("Event not found", 404));
     }
 
-    if (ticketId) {
-      const ticket = event.tickets.id(ticketId);
-      if (!ticket) {
-        return res.status(404).json({ message: "Ticket not found" });
-      }
-      return res.status(200).json(ticket);
-    }
-
-    res.status(200).json(event.tickets);
+    res.status(200).json({ message: "All tickets", tickets: event.tickets });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching tickets", error });
+    return next(ServerError(error));
   }
 };
 
-/**
- * @method  addOrUpdateTicket
- * @param {*} req
- * @param {*} res
- * @param {*} next
- * @returns Adds and Updates Ticket
- */
-export const addOrUpdateTicket = async (req, res) => {
+export const createNewTicket = async (req, res, next) => {
+  const userId = req.userId;
+  const eventId = req.params.eventId;
+  const {
+    ticketName,
+    validFrom,
+    validTo,
+    maxCapacity,
+    capacityLimitation,
+    price,
+    vatPercentage,
+    descriptionWeb,
+    descriptionTicket,
+  } = req.body;
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return next(new HttpError("Event not found", 404));
+    }
+
+    const { vat, priceWithVAT } = calculatePriceWithVAT(price, vatPercentage);
+
+    const newTicket = {
+      ticketName,
+      validFrom,
+      validTo,
+      maxCapacity,
+      capacityLimitation,
+      price,
+      vatPercentage,
+      vat,
+      priceWithVAT,
+      descriptionWeb,
+      descriptionTicket,
+    };
+
+    event.tickets.push(newTicket);
+    const savedEvent = await event.save();
+
+    res.status(200).json({ message: "Ticket created", event: savedEvent });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
+export const updateTicket = async (req, res, next) => {
+  const userId = req.userId;
+  const eventId = req.params.eventId;
+  const ticketId = req.params.ticketId;
+  const {
+    ticketName,
+    validFrom,
+    validTo,
+    maxCapacity,
+    capacityLimitation,
+    price,
+    vatPercentage,
+    descriptionWeb,
+    descriptionTicket,
+  } = req.body;
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return next(new HttpError("Event not found", 404));
+    }
+
+    const ticketIndex = event.tickets.findIndex(
+      (ticket) => ticket._id.toString() === ticketId
+    );
+    if (ticketIndex === -1) {
+      return next(new HttpError("Ticket not found", 404));
+    }
+
+    const { vat, priceWithVAT } = calculatePriceWithVAT(price, vatPercentage);
+
+    const updatedTicket = {
+      _id: ticketId, // Maintain the same mongoose ObjectId
+      ticketName,
+      validFrom,
+      validTo,
+      maxCapacity,
+      capacityLimitation,
+      price,
+      vatPercentage,
+      vat,
+      priceWithVAT,
+      descriptionWeb,
+      descriptionTicket,
+    };
+
+    event.tickets[ticketIndex] = updatedTicket;
+    const savedEvent = await event.save();
+
+    res.status(200).json({ message: "Ticket updated", event: savedEvent });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
+export const deleteTicket = async (req, res, next) => {
   const userId = req.userId;
   const eventId = req.params.eventId;
   const ticketId = req.params.ticketId;
 
-  const {
-    ticketName,
-    dateStart,
-    dateEnd,
-    maxCapacity,
-    price,
-    vatPercentage,
-    description,
-  } = req.body;
-  const inventory = maxCapacity;
-  const { vat, priceWithVAT } = calculatePriceWithVAT(price, vatPercentage);
-
+  console.log(eventId);
   try {
-    const user = await business.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
     }
-    const event = user.events.id(eventId);
+
+    const event = await Event.findById(eventId);
     if (!event) {
-      return res.status(404).json({ error: "Event not found" });
+      return next(new HttpError("Event not found", 404));
     }
 
-    let ticket;
-    if (ticketId === "new") {
-      const newTicket = {
-        ticketName,
-        dateStart,
-        dateEnd,
-        maxCapacity,
-        price,
-        vatPercentage,
-        vat,
-        priceWithVAT,
-        description,
-        inventory,
-      };
-
-      event.tickets.push(newTicket);
-      await user.save();
-      ticket = event.tickets[event.tickets.length - 1];
-
-      var ticketIdInsert = ticket._id;
-
-      await ticketCode.findOneAndUpdate(
-        { event: eventId },
-        {
-          $push: {
-            tickets: {
-              ticketName: ticketName,
-              ticketId: ticketIdInsert,
-              codes: [],
-            },
-          },
-        },
-        { new: true }
-      );
-    } else {
-      ticket = event.tickets.id(ticketId);
-      if (!ticket) {
-        return res.status(404).json({ error: "Ticket not found" });
-      }
-      ticket.set({
-        ticketName,
-        dateStart,
-        dateEnd,
-        maxCapacity,
-        price,
-        vatPercentage,
-        vat,
-        priceWithVAT,
-        description,
-        inventory,
-      });
-      await user.save();
-
-      if (ticketId !== "new") {
-        await ticketCode.findOneAndUpdate(
-          { event: eventId, "tickets.ticketId": ticketId },
-          { $set: { "tickets.$.ticketName": ticketName } }
-        );
-      }
+    const ticketIndex = event.tickets.findIndex(
+      (ticket) => ticket._id.toString() === ticketId
+    );
+    if (ticketIndex === -1) {
+      return next(new HttpError("Ticket not found", 404));
     }
 
-    res.status(200).json({ message: "Ticket updated", ticketId: ticket._id });
+    const deletedTicket = event.tickets.splice(ticketIndex, 1)[0];
+
+    // Populate the businessId field from the existing event
+    const updatedEvent = await event.save({ validateBeforeSave: false });
+    console.log(updatedEvent._id);
+    res.status(200).json({
+      message: "Ticket deleted",
+      ticket: deletedTicket,
+      event: updatedEvent,
+    });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    return next(ServerError(error));
   }
 };

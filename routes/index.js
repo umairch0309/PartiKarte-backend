@@ -11,7 +11,7 @@ const router = Router();
 router.use("/business", business);
 router.use("/auth", auth);
 router.use("/", events);
-router.use("/tickets", tickets);
+router.use("/", tickets);
 router.use("/", contact);
 router.use("/documents", documents);
 router.use("/", documents);
