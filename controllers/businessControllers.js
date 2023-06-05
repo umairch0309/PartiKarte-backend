@@ -792,3 +792,52 @@ export const updateBusinessSocialDesc = async (req, res) => {
       );
   }
 };
+
+export const setSocialLink = async (req, res, next) => {
+  const userId = req.userId;
+  const platform = req.body.platform;
+  const link = req.body.link;
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    const myBusiness = await Business.findById(business._id);
+
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    // Set the social link based on the specified platform
+    switch (platform) {
+      case "facebook":
+        myBusiness.socialLinks.facebook = link;
+        break;
+      case "instagram":
+        myBusiness.socialLinks.instagram = link;
+        break;
+      case "website":
+        myBusiness.socialLinks.website = link;
+        break;
+      case "twitter":
+        myBusiness.socialLinks.twitter = link;
+        break;
+      case "other":
+        myBusiness.socialLinks.other = link;
+        break;
+      default:
+        return next(new HttpError("Invalid platform", 400));
+    }
+
+    const updatedBusiness = await myBusiness.save();
+
+    if (!updatedBusiness) {
+      return next(new HttpError("Couldn't perform task", 500));
+    }
+
+    res.status(200).json({
+      message: "Social link updated",
+      businessLinks: updatedBusiness.socialLinks,
+    });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};

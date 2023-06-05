@@ -22,6 +22,7 @@ import {
   addOrUpdateNews,
   updateBusinessSocialDesc,
   updateProfile,
+  setSocialLink,
 } from "../controllers/businessControllers.js";
 
 const router = express.Router();
@@ -39,6 +40,8 @@ router.put(
   updateBusinessMarketingInformation
 );
 router.put("/update-profile", verifyToken, updateProfile);
+
+router.put("/set-social-link", verifyToken, setSocialLink);
 
 // owners routes
 router.put("/business-owners/:id", verifyToken, addOrUpdateOwner);
