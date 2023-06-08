@@ -20,7 +20,6 @@ import {
   updateOrganizerImage,
   getOrganizersBySlug,
   addOrUpdateNews,
-  updateBusinessSocialDesc,
   updateProfile,
   setSocialLink,
 } from "../controllers/businessControllers.js";
@@ -44,7 +43,7 @@ router.put("/update-profile", verifyToken, updateProfile);
 router.put("/set-social-link", verifyToken, setSocialLink);
 
 // owners routes
-router.put("/business-owners/:id", verifyToken, addOrUpdateOwner);
+router.put("/business-managers/add-new", verifyToken, addOrUpdateOwner);
 router.delete("/business-owners/:id", verifyToken, deleteOwner);
 // owners routes end
 router.get("/gallery/:galleryId", getBusinessGallery);
@@ -67,6 +66,5 @@ router.put(
 );
 router.get("/organizers/:urlSlug", getOrganizersBySlug);
 router.put("/news/:newsId", verifyToken, addOrUpdateNews);
-router.put("/description", verifyToken, updateBusinessSocialDesc);
 
 export { router as business };

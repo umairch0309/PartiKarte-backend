@@ -747,51 +747,6 @@ export const addOrUpdateNews = async (req, res) => {
   }
 };
 
-/**
- * function needs to be merged 1
- * @method  updateBusinessSocialDesc
- * @param {*} req
- * @param {*} res
- * @returns Add Or updates news
- */
-export const updateBusinessSocialDesc = async (req, res) => {
-  try {
-    const { description, facebook, instagram, website, twitter, other } =
-      req.body;
-    const businessId = req.userId;
-
-    const business = await business.findById(businessId);
-    if (!business) {
-      return res.status(404).send("business not found");
-    }
-
-    if (description) {
-      business.description = description;
-    }
-
-    if (facebook || instagram || website || twitter || other) {
-      business.socialLinks = {
-        facebook: facebook || business.socialLinks.facebook,
-        instagram: instagram || business.socialLinks.instagram,
-        website: website || business.socialLinks.website,
-        twitter: twitter || business.socialLinks.twitter,
-        other: other || business.socialLinks.other,
-      };
-    }
-
-    await business.save();
-
-    res.status(200).send({
-      message: "business description and social links updated successfully",
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .send(
-        "Error updating business description and social links: " + error.message
-      );
-  }
-};
 
 export const setSocialLink = async (req, res, next) => {
   const userId = req.userId;
