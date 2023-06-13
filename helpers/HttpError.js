@@ -7,7 +7,8 @@ export default class HttpError extends Error {
 
 export const createValidationError = (error) => {
   const errorMessages = Object.values(error.errors).map((err) => err.message);
-  return new HttpError(errorMessages, 409);
+  return errorMessages;
+  // return new HttpError(errorMessages, 409);
 };
 
 export const ServerError = (error) => {

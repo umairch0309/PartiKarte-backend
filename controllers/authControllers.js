@@ -97,14 +97,17 @@ export const register = async (req, res, next) => {
       .json({ message: "User created successfully", _id: user._id });
   } catch (error) {
     console.log(error);
+    // If an error occurred, rollback the changes by deleting the created business
+    if (user) {
+      await User.findByIdAndDelete(user._id);
+    }
+
     if (error.name === "ValidationError") {
-      return next(createValidationError(error));
+      console.log(createValidationError(error));
+      return next(
+        new HttpError("Please enter unique registery or vat number", 409)
+      );
     } else {
-      console.log(error);
-      // If an error occurred, rollback the changes by deleting the created business
-      if (user) {
-        await Business.findByIdAndDelete(user._id);
-      }
       return next(
         new HttpError("Unexpected error occurred while creating business", 500)
       );

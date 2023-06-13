@@ -3,7 +3,8 @@ import Image from "../models/image.js";
 import path from "path";
 import fs from "fs";
 import { isImageFile } from "../helpers/helpers.js";
-
+import uploadS3Image from "../utils/uploadS3Image.js";
+import { IMAGE_TYPES } from "../utils/constants.js";
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { findBusinessAndUser } from "../DAL/common.js";
 import Business from "../models/business.js";
@@ -192,21 +193,61 @@ export const updateProfile = async (req, res, next) => {
   const userId = req.userId;
   const { username, email } = req.body;
 
+  const { profile_image } = req.files;
+
+  let uploadedImage;
+
   try {
-    const { user, business } = await findBusinessAndUser({ _id: userId });
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+      ...(email && { email }),
+      ...(username && { username }),
+    });
+
     if (!user || !business) {
-      return next(new HttpError("Invalid id", 404));
+      throw new HttpError("Invalid id", 404);
+    } else if (user && business && (username || email)) {
+      throw new HttpError("Please choose a unique username or email", 409);
     }
 
     const myUser = await User.findById(user._id);
 
-    myUser.email = email;
-    myUser.username = username;
+    if (myUser && req.files && profile_image) {
+      const fileType = profile_image.mimetype;
+      if (IMAGE_TYPES.includes(fileType)) {
+        try {
+          const filename = path.basename(profile_image.name);
+          uploadedImage = await uploadS3Image(
+            filename,
+            "profile_images/",
+            profile_image.data,
+            next
+          );
+
+          if (!uploadedImage.status || !uploadedImage.uploadedImagePath) {
+            throw new HttpError("Couldn't upload image due to S3", 500);
+          }
+
+          myUser.profile_image = uploadedImage.uploadedImagePath;
+        } catch (error) {
+          console.log(error);
+          throw new HttpError("Couldn't upload image", 500);
+        }
+      }
+    }
+
+    if (email) {
+      myUser.email = email;
+    }
+
+    if (username) {
+      myUser.username = username;
+    }
 
     const updatedUser = await myUser.save();
 
     res.status(200).json({
-      message: "business settings updated",
+      message: "Business settings updated",
       updatedUser,
     });
   } catch (error) {
@@ -746,7 +787,6 @@ export const addOrUpdateNews = async (req, res) => {
     res.status(500).send("Error processing news: " + error.message);
   }
 };
-
 
 export const setSocialLink = async (req, res, next) => {
   const userId = req.userId;
