@@ -1,0 +1,192 @@
+import bcrypt from "bcrypt";
+import { isImageFile } from "../helpers/helpers.js";
+import { userSchema } from "../helpers/validation.js";
+import uploadS3Image from "../utils/uploadS3Image.js";
+import HttpError, { ServerError } from "../helpers/HttpError.js";
+import { findBusinessAndUser } from "../DAL/common.js";
+import { generateUrlSlug } from "../helpers/helpers.js";
+import Business from "../models/business.js";
+import User from "../models/user.js";
+
+export const addBusinessManager = async (req, res, next) => {
+  const userId = req.userId;
+
+  const {
+    name,
+    surname,
+    email,
+    role,
+    dob,
+    password,
+    guestType,
+    addressDescription,
+    city,
+    postalCode,
+    country,
+  } = req.body;
+
+  const [IDFront, IDBack] = req.files;
+
+  const username = `${name}${surname}`;
+
+  let newUser, myBusiness, savedBusiness;
+
+  try {
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    myBusiness = await Business.findById(user.businessId);
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    // Validate user input
+    const { error } = userSchema.validate({ email, username, password });
+    if (error) throw error;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }],
+    });
+    if (existingUser) {
+      return next(new HttpError("Username or email already taken", 409));
+    }
+
+    isImageFile(IDFront.mimetype, next);
+    isImageFile(IDBack.mimetype, next);
+
+    const uploadedIDFront = await uploadS3Image(IDFront, "id_images/", next);
+    const uploadedIDBack = await uploadS3Image(IDBack, "id_images/", next);
+
+    if (
+      uploadedIDFront.uploadedImagePath &&
+      uploadedIDFront.status &&
+      uploadedIDBack.uploadedImagePath &&
+      uploadedIDBack.status
+    ) {
+      // Hash the password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      newUser = new User({
+        role: "admin",
+        email,
+        username,
+        password: hashedPassword,
+        role,
+        dob,
+        IDFront: uploadedIDFront.uploadedImagePath,
+        IDBack: uploadedIDBack.uploadedImagePath,
+        guestType,
+        salt,
+        urlSlug: generateUrlSlug(username),
+        address: {
+          addressDescription,
+          city,
+          postalCode,
+          country,
+        },
+      });
+
+      newUser.businessId = myBusiness._id;
+      myBusiness.businessManagers.push(newUser._id);
+      // Save the new user
+      await newUser.save();
+      // Save the new business
+      savedBusiness = await myBusiness.save();
+    }
+
+    res
+      .status(201)
+      .json({ message: "User created successfully", user: newUser });
+  } catch (error) {
+    if (!savedBusiness && newUser) {
+      await User.findByIdAndDelete(newUser._id);
+    }
+    if (error.name === "ValidationError") {
+      console.log(createValidationError(error));
+      return next(new HttpError("Please enter correct inputs", 409));
+    } else {
+      return next(new HttpError(error, 500));
+    }
+  }
+};
+
+export const updateBusinessManager = async (req, res, next) => {
+  const userId = req.userId;
+  const managerId = req.params.managerId;
+
+  const {
+    name,
+    surname,
+    role,
+    dob,
+    guestType,
+    addressDescription,
+    city,
+    postalCode,
+    country,
+  } = req.body;
+
+  const [IDFront, IDBack] = req.files;
+
+  let IDFrontLink, IDBackLink;
+
+  try {
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    // Check if the manager already exists
+    const existingUser = await User.findById(managerId);
+    if (!existingUser) {
+      return next(new HttpError("User not found", 404));
+    }
+
+    if (IDFront && IDBack) {
+      isImageFile(IDFront.mimetype, next);
+      isImageFile(IDBack.mimetype, next);
+
+      const uploadedIDFront = await uploadS3Image(IDFront, "id_images/", next);
+      const uploadedIDBack = await uploadS3Image(IDBack, "id_images/", next);
+
+      if (
+        uploadedIDFront.uploadedImagePath &&
+        uploadedIDFront.status &&
+        uploadedIDBack.uploadedImagePath &&
+        uploadedIDBack.status
+      ) {
+        IDBackLink = uploadedIDBack.uploadedImagePath;
+        IDFrontLink = uploadedIDFront.uploadedImagePath;
+      }
+    }
+
+    // Update the manager details
+    existingUser.role = "admin";
+    existingUser.name = name;
+    existingUser.surname = surname;
+    existingUser.role = role;
+    existingUser.dob = dob;
+    existingUser.IDFront = IDFrontLink ? IDFrontLink : existingUser.IDFront;
+    existingUser.IDBack = IDBackLink ? IDBackLink : existingUser.IDBack;
+    existingUser.guestType = guestType;
+    existingUser.address = {
+      addressDescription,
+      city,
+      postalCode,
+      country,
+    };
+
+    // Save the updated user
+    await existingUser.save();
+
+    res
+      .status(200)
+      .json({ message: "User updated successfully", user: existingUser });
+  } catch (error) {
+    return next(new HttpError(error, 500));
+  }
+};

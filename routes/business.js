@@ -23,6 +23,10 @@ import {
   updateProfile,
   setSocialLink,
 } from "../controllers/businessControllers.js";
+import {
+  addBusinessManager,
+  updateBusinessManager,
+} from "../controllers/businessManagersControllers.js";
 
 const router = express.Router();
 
@@ -42,9 +46,14 @@ router.put("/update-profile", verifyToken, updateProfile);
 
 router.put("/set-social-link", verifyToken, setSocialLink);
 
-// owners routes
-router.put("/business-managers/add-new", verifyToken, addOrUpdateOwner);
-router.delete("/business-owners/:id", verifyToken, deleteOwner);
+// business manager routes
+router.post("/business-managers/add", verifyToken, addBusinessManager);
+router.put(
+  "/business-managers/update/:managerId",
+  verifyToken,
+  updateBusinessManager
+);
+
 // owners routes end
 router.get("/gallery/:galleryId", getBusinessGallery);
 router.put("/gallery", upload.array("images", 10), verifyToken, createGallery);

@@ -18,3 +18,5 @@ export const s3 = {
   s3Client,
   uploadParams,
 };
+
+export default s3;

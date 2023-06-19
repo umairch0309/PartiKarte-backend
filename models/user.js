@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    DOB: {
+    dob: {
       type: Date,
     },
     profile_image: {
@@ -59,6 +59,9 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
+    },
+    guestType: {
+      type: String,
     },
     businessId: {
       type: mongoose.Schema.Types.ObjectId,

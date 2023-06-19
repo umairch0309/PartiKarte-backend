@@ -24,6 +24,36 @@ export const getAllTickets = async (req, res, next) => {
   }
 };
 
+export const getTicket = async (req, res, next) => {
+  const userId = req.userId;
+  const eventId = req.params.eventId;
+  const ticketId = req.params.ticketId;
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return next(new HttpError("Event not found", 404));
+    }
+
+    const ticket = event.tickets.filter(
+      (ticket) => ticket._id.toString() === ticketId
+    );
+
+    if (!ticket[0]) {
+      return next(new HttpError("Ticket not found", 404));
+    }
+
+    res.status(200).json({ message: "Ticket found", ticket: ticket[0] });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
 export const createNewTicket = async (req, res, next) => {
   const userId = req.userId;
   const eventId = req.params.eventId;
@@ -68,7 +98,7 @@ export const createNewTicket = async (req, res, next) => {
     event.tickets.push(newTicket);
     const savedEvent = await event.save();
 
-    res.status(200).json({ message: "Ticket created", event: savedEvent });
+    res.status(200).json({ message: "Ticket created", ticket: newTicket });
   } catch (error) {
     return next(ServerError(error));
   }
@@ -126,9 +156,9 @@ export const updateTicket = async (req, res, next) => {
     };
 
     event.tickets[ticketIndex] = updatedTicket;
-    const savedEvent = await event.save();
+    await event.save();
 
-    res.status(200).json({ message: "Ticket updated", event: savedEvent });
+    res.status(200).json({ message: "Ticket updated", ticket: updatedTicket });
   } catch (error) {
     return next(ServerError(error));
   }

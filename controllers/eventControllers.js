@@ -7,6 +7,7 @@ import { findBusinessAndUser } from "../DAL/common.js";
 import Event from "../models/event.js";
 import Business from "../models/business.js";
 import mongoose from "mongoose";
+import uploadS3Image from "../utils/uploadS3Image.js";
 
 export const getAllEvents = async (req, res, next) => {
   const userId = req.userId;
@@ -20,6 +21,24 @@ export const getAllEvents = async (req, res, next) => {
     const events = await Event.find({ businessId: business._id });
 
     res.status(200).json({ events });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
+export const getEvent = async (req, res, next) => {
+  const userId = req.userId;
+  const { eventId } = req.params;
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const event = await Event.findById(eventId);
+
+    res.status(200).json({ event });
   } catch (error) {
     return next(ServerError(error));
   }
@@ -45,24 +64,28 @@ export const createNewEvent = async (req, res, next) => {
 
   const [eventBanner] = req.files;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
-    const myBusiness = await Business.findById(user.businessId).session(
-      session
-    );
+    const myBusiness = await Business.findById(user.businessId);
     if (!user || !business || !myBusiness) {
-      await session.abortTransaction();
-      session.endSession();
       return next(new HttpError("Invalid id", 400));
     }
 
-    isImageFile(eventBanner.mimetype);
+    isImageFile(eventBanner.mimetype, next);
 
-    // upload image and get link
-    const eventBannerLink = "event banner image link";
+    const uploadedEventBanner = await uploadS3Image(
+      eventBanner,
+      "event_banners/",
+      next
+    );
+
+    let eventBannerLink = "";
+
+    console.log("upload image", uploadedEventBanner);
+
+    if (uploadedEventBanner.uploadedImagePath && uploadedEventBanner.status) {
+      eventBannerLink = uploadedEventBanner.uploadedImagePath;
+    }
 
     const newEvent = new Event({
       eventName,
@@ -84,24 +107,18 @@ export const createNewEvent = async (req, res, next) => {
       businessId: myBusiness._id,
     });
 
-    console.log(newEvent);
-    const savedEvent = await newEvent.save({ session });
+    const savedEvent = await newEvent.save();
 
-    myBusiness.events.push(savedEvent._id);
-    await myBusiness.save({ session });
-
-    if (!savedEvent) {
-      await session.abortTransaction();
-      session.endSession();
-      return next(new HttpError("Could not create event", 500));
+    if (savedEvent) {
+      myBusiness.events.push(savedEvent._id);
+      await myBusiness.save();
     }
 
-    await session.commitTransaction();
-    session.endSession();
+    if (!savedEvent) {
+      return next(new HttpError("Could not create event", 500));
+    }
     res.status(200).json({ message: "Event created", event: savedEvent });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     return next(ServerError(error));
   }
 };
@@ -137,8 +154,14 @@ export const updateEvent = async (req, res, next) => {
     let eventBannerLink = "";
 
     if (eventBanner && eventBanner.mimetype.startsWith("image/")) {
-      // Upload the image and get the link
-      eventBannerLink = "event banner link new";
+      const uploadedEventBanner = await uploadS3Image(
+        eventBanner,
+        "event_banners/",
+        next
+      );
+      if (uploadedEventBanner.uploadedImagePath && uploadedEventBanner.status) {
+        eventBannerLink = uploadedEventBanner.uploadedImagePath;
+      }
     } else {
       eventBannerLink = req.body.eventBanner;
     }
@@ -180,44 +203,37 @@ export const updateEvent = async (req, res, next) => {
 };
 
 export const changeEventImage = async (req, res, next) => {
-  const { eventId } = req.params;
-  const { userId } = req.query;
+  const userId = req.userId;
+  const eventId = req.params.eventId;
+  const [eventBanner] = req.files;
+
+  console.log(eventBanner);
 
   try {
-    if (!req.files.eventBanner)
-      return next(new HttpError("Image not attached", 400));
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
 
-    await isImageFile(req.files.eventBanner.mimetype, next);
+    const event = await Event.findById(eventId);
 
-    const optimizedPath = await preprocessImage(req.file.path);
-
-    const newImage = new Image({
-      name: req.file.originalname,
-      filePath: optimizedPath,
-      contentType: req.file.mimetype,
-    });
-    await newImage.save();
-    let eventBanner = newImage._id;
-
-    const user = await business.findOne({ _id: userId });
-
-    let event = user.events.id(eventId);
     if (!event) {
-      return next(new HttpError("Event not found", 404));
+      return next(new HttpError("Invalid event id", 400));
     }
 
-    if (event.eventBanner) {
-      const oldImage = await Image.findById(event.eventBanner);
-      if (oldImage.filePath && fs.existsSync(oldImage.filePath)) {
-        fs.unlinkSync(oldImage.filePath);
-      }
-      await Image.deleteOne({ _id: event.eventBanner });
+    isImageFile(eventBanner.mimetype, next);
+
+    const uploadedEventBanner = await uploadS3Image(
+      eventBanner,
+      "event_banners/",
+      next
+    );
+    if (uploadedEventBanner.uploadedImagePath && uploadedEventBanner.status) {
+      event.eventBanner = uploadedEventBanner.uploadedImagePath;
+      event.save();
     }
 
-    event.set({ eventBanner });
-    await user.save();
-
-    res.status(201).send({ id: newImage._id });
+    res.status(201).send({ event });
   } catch (error) {
     console.error(error);
     return next(new HttpError(error.message, 500));
@@ -228,37 +244,29 @@ export const deleteEvent = async (req, res, next) => {
   const userId = req.userId;
   const eventId = req.params.id;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
-    const myBusiness = await Business.findById(user.businessId).session(
-      session
-    );
+    const myBusiness = await Business.findById(user.businessId);
+
     if (!user || !business || !myBusiness) {
-      await session.abortTransaction();
-      session.endSession();
       return next(new HttpError("Invalid id", 400));
     }
-    const deletedEvent = await Event.findByIdAndDelete(eventId, { session });
-    myBusiness.events = myBusiness.events.filter(
-      (event) => event.toString() !== deletedEvent._id.toString()
-    );
 
-    await myBusiness.save({ session });
+    const deletedEvent = await Event.findByIdAndDelete(eventId);
 
     if (!deletedEvent) {
-      await session.abortTransaction();
-      session.endSession();
       return next(new HttpError("Invalid event id", 400));
     }
 
-    await session.commitTransaction();
-    session.endSession();
+    myBusiness.events = myBusiness.events.filter(
+      (event) => event.toString() !== deletedEvent._id.toString()
+    );
+    if (deletedEvent) {
+      await myBusiness.save();
+    }
+
     res.status(200).json({ message: "Event deleted", event: deletedEvent });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     return next(new HttpError(error.message, 500));
   }
 };
