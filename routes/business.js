@@ -1,30 +1,25 @@
 import express from "express";
 import verifyToken from "../middlewares/verifyToken.js";
-import { upload } from "../helpers/multerConfig.js";
 
 import {
   updateBusinessInformation,
   updateBusinessContact,
   updateBusinessFinancialInformation,
   updateBusinessMarketingInformation,
-  addOrUpdateOwner,
   getBusinessGallery,
   createGallery,
-  getGalleryImageById,
-  AddOrUpdateManager,
-  deleteOwner,
-  deleteManager,
-  updateUserName,
-  updateEmail,
-  getOrganizerImage,
-  updateOrganizerImage,
-  getOrganizersBySlug,
   addOrUpdateNews,
   updateProfile,
   setSocialLink,
+  getAllGalleries,
+  deleteBusinessGallery,
+  getOrganizerDetails,
+  updateOrganizerDetails,
 } from "../controllers/businessControllers.js";
 import {
   addBusinessManager,
+  deleteBusinessManager,
+  getAllBusinessManagers,
   updateBusinessManager,
 } from "../controllers/businessManagersControllers.js";
 
@@ -47,33 +42,28 @@ router.put("/update-profile", verifyToken, updateProfile);
 router.put("/set-social-link", verifyToken, setSocialLink);
 
 // business manager routes
+router.get("/business-managers", verifyToken, getAllBusinessManagers);
 router.post("/business-managers/add", verifyToken, addBusinessManager);
 router.put(
   "/business-managers/update/:managerId",
   verifyToken,
   updateBusinessManager
 );
+router.delete(
+  "/business-managers/delete/:managerId",
+  verifyToken,
+  deleteBusinessManager
+);
 
 // owners routes end
-router.get("/gallery/:galleryId", getBusinessGallery);
-router.put("/gallery", upload.array("images", 10), verifyToken, createGallery);
-router.get("/gallery/image/:imageId", getGalleryImageById);
-// managers routes
-router.put("/business-managers/:id", verifyToken, AddOrUpdateManager);
-router.delete("/business-managers/:id", verifyToken, deleteManager);
-// managers routes end
+router.put("/gallery/add", verifyToken, createGallery);
+router.get("/gallery", verifyToken, getAllGalleries);
+router.get("/gallery/:galleryId", verifyToken, getBusinessGallery);
+router.delete("/gallery/:galleryId", verifyToken, deleteBusinessGallery);
 
-// update business user apis starting from here
-router.put("/change-username", verifyToken, updateUserName);
-router.put("/change-email", verifyToken, updateEmail);
-router.get("/organizer-image/:id", getOrganizerImage);
-router.put(
-  "/organizer-image",
-  upload.single("image"),
-  verifyToken,
-  updateOrganizerImage
-);
-router.get("/organizers/:urlSlug", getOrganizersBySlug);
+router.get("/organizer-details", verifyToken, getOrganizerDetails);
+router.patch("/organizer-details/update", verifyToken, updateOrganizerDetails);
+
 router.put("/news/:newsId", verifyToken, addOrUpdateNews);
 
 export { router as business };

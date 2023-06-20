@@ -8,6 +8,31 @@ import { generateUrlSlug } from "../helpers/helpers.js";
 import Business from "../models/business.js";
 import User from "../models/user.js";
 
+export const getAllBusinessManagers = async (req, res, next) => {
+  const userId = req.userId;
+
+  try {
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const businessManagers = await User.find();
+    if (!businessManagers) {
+      return next(new HttpError("Managers not found", 404));
+    }
+
+    res.status(200).send({
+      message: "All Managers",
+      data: businessManagers,
+    });
+  } catch (error) {
+    return next(new ServerError(error));
+  }
+};
+
 export const addBusinessManager = async (req, res, next) => {
   const userId = req.userId;
 
@@ -143,7 +168,7 @@ export const updateBusinessManager = async (req, res, next) => {
     // Check if the manager already exists
     const existingUser = await User.findById(managerId);
     if (!existingUser) {
-      return next(new HttpError("User not found", 404));
+      return next(new HttpError("Manager not found", 404));
     }
 
     if (IDFront && IDBack) {
@@ -188,5 +213,45 @@ export const updateBusinessManager = async (req, res, next) => {
       .json({ message: "User updated successfully", user: existingUser });
   } catch (error) {
     return next(new HttpError(error, 500));
+  }
+};
+
+export const deleteBusinessManager = async (req, res, next) => {
+  const userId = req.userId;
+  const managerId = req.params.managerId;
+  let existingUser;
+  try {
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    const myBusiness = await Business.findById(user.businessId);
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+    const oldBusinessManagers = myBusiness.businessManagers;
+    myBusiness.businessManagers = myBusiness.businessManagers.filter(
+      (manager) => manager.toString() !== managerId
+    );
+
+    console.log(
+      oldBusinessManagers.length - 1,
+      myBusiness.businessManagers.length
+    );
+
+    if (oldBusinessManagers.length - 1 === myBusiness.businessManagers.length) {
+      existingUser = await User.findByIdAndDelete(managerId);
+      if (!existingUser) {
+        return next(new HttpError("Manager not found", 404));
+      }
+      myBusiness.save();
+    } else {
+      return next(new HttpError("Couldn't delete manager", 404));
+    }
+
+    res
+      .status(200)
+      .send({ message: "Manager deleted successfully", data: existingUser });
+  } catch (error) {
+    return next(new ServerError(error));
   }
 };

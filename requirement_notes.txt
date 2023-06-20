@@ -2,7 +2,7 @@ Businesses to post events ===DONE===
 Businesses to authenticate ===DONE===
 Businesses to register  ===DONE===
 Businesses to add tickets (Tickets are linked to events) ===DONE===
-Businesses to add cover photos 
+Businesses to add cover photos ===DONE===
 Businesses to post news
 Businesses to create galleries
 Businesses to create guest lists, and add people to them (A guest list is linked to an event; people are linked to the guest list)

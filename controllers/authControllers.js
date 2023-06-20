@@ -71,7 +71,6 @@ export const register = async (req, res, next) => {
     // Create a new business instance
     newBusiness = new Business({
       businessManagers: [user._id], // Add the user ID to the businessManagers array
-      organizerName: username,
       urlSlug: generateUrlSlug(username),
       company: {
         companyName,

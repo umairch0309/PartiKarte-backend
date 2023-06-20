@@ -4,11 +4,11 @@ import path from "path";
 import fs from "fs";
 import { isImageFile } from "../helpers/helpers.js";
 import uploadS3Image from "../utils/uploadS3Image.js";
-import { IMAGE_TYPES } from "../utils/constants.js";
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { findBusinessAndUser } from "../DAL/common.js";
 import Business from "../models/business.js";
 import User from "../models/user.js";
+import Event from "../models/event.js";
 
 /**
  * @method  updateBusinessInformation
@@ -90,7 +90,7 @@ export const updateBusinessContact = async (req, res, next) => {
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
     if (!user || !business) {
-      throw new HttpError("Invalid Id", 404);
+      return next(new HttpError("Invalid Id", 404));
     }
 
     let update = {};
@@ -200,39 +200,37 @@ export const updateProfile = async (req, res, next) => {
   try {
     const { user, business } = await findBusinessAndUser({
       _id: userId,
-      ...(email && { email }),
-      ...(username && { username }),
     });
 
     if (!user || !business) {
-      throw new HttpError("Invalid id", 404);
-    } else if (user && business && (username || email)) {
-      throw new HttpError("Please choose a unique username or email", 409);
+      return next(new HttpError("Invalid Id", 404));
+    }
+
+    const { user: duplicateUser, business: duplicateBusiness } =
+      await findBusinessAndUser({
+        _id: userId,
+        ...(email && { email }),
+        ...(username && { username }),
+      });
+
+    if (duplicateUser && duplicateBusiness && (username || email)) {
+      return next(
+        new HttpError("Please choose a unique username or email", 409)
+      );
     }
 
     const myUser = await User.findById(user._id);
 
     if (myUser && req.files && profile_image) {
-      const fileType = profile_image.mimetype;
-      if (IMAGE_TYPES.includes(fileType)) {
-        try {
-          const filename = path.basename(profile_image.name);
-          uploadedImage = await uploadS3Image(
-            filename,
-            "profile_images/",
-            profile_image.data,
-            next
-          );
+      isImageFile(profile_image, next);
 
-          if (!uploadedImage.status || !uploadedImage.uploadedImagePath) {
-            throw new HttpError("Couldn't upload image due to S3", 500);
-          }
-
-          myUser.profile_image = uploadedImage.uploadedImagePath;
-        } catch (error) {
-          console.log(error);
-          throw new HttpError("Couldn't upload image", 500);
-        }
+      const uploadedImageObj = await uploadS3Image(
+        profile_image,
+        "profile_images/",
+        next
+      );
+      if (uploadedImageObj.uploadedImagePath && uploadedImageObj.status) {
+        uploadedImage = uploadedImageObj.uploadedImagePath;
       }
     }
 
@@ -244,6 +242,10 @@ export const updateProfile = async (req, res, next) => {
       myUser.username = username;
     }
 
+    if (uploadedImage) {
+      myUser.profile_image = uploadedImage;
+    }
+
     const updatedUser = await myUser.save();
 
     res.status(200).json({
@@ -251,72 +253,32 @@ export const updateProfile = async (req, res, next) => {
       updatedUser,
     });
   } catch (error) {
-    next(new HttpError(error.message, 400));
+    return next(ServerError(error));
   }
 };
 
-/**
- * @method  addOrUpdateOwner
- * @param {*} req
- * @param {*} res
- * @returns Adds/Updates business owner information
- */
-export const addOrUpdateOwner = async (req, res) => {
+// GALLERIES
+
+export const getAllGalleries = async (req, res, next) => {
   const userId = req.userId;
-  const ownerId = req.params.id;
-
-  const {
-    ownerName,
-    ownerSurname,
-    ownerDOB,
-    ownerAddress,
-    ownerIDFront,
-    ownerIDBack,
-  } = req.body;
-
   try {
-    const user = await business.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    console.log(user);
+    if (!user || !business) {
+      return next(new HttpError("Invalid Id", 404));
     }
 
-    let owner;
-    if (ownerId === "new") {
-      // Create a new business owner if it doesn't exist
-      const newOwner = {
-        ownerName,
-        ownerSurname,
-        ownerDOB,
-        ownerAddress,
-        ownerIDFront,
-        ownerIDBack,
-      };
+    const gallery = business.galleries;
 
-      user.owners.push(newOwner);
-      owner = user.owners[user.owners.length - 1];
-    } else {
-      // Update an existing business owner
-      owner = user.owners.id(ownerId);
-      if (!owner) {
-        return res.status(404).json({ error: "business owner not found" });
-      }
-
-      owner.set({
-        ownerName,
-        ownerSurname,
-        ownerDOB,
-        ownerAddress,
-        ownerIDFront,
-        ownerIDBack,
-      });
+    if (!gallery) {
+      return next(new HttpError("Galleries not found", 404));
     }
 
-    await user.save();
-    res
-      .status(200)
-      .json({ message: "business owner updated", ownerId: owner._id });
+    res.status(200).json({ gallery });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    return next(ServerError(error));
   }
 };
 
@@ -326,48 +288,28 @@ export const addOrUpdateOwner = async (req, res) => {
  * @param {*} res
  * @returns business gallery
  */
-export const getBusinessGallery = async (req, res) => {
+export const getBusinessGallery = async (req, res, next) => {
   const galleryId = req.params.galleryId;
-
+  const userId = req.userId;
   try {
-    const user = await business.findOne({ "galleries._id": galleryId });
-    if (!user) {
-      return res.status(404).send("Gallery not found");
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    if (!user || !business) {
+      return next(new HttpError("Invalid Id", 404));
     }
 
-    const gallery = user.galleries.id(galleryId);
+    const gallery = business.galleries.filter(
+      (gallery) => gallery._id.toString() === galleryId
+    );
+
     if (!gallery) {
-      return res.status(404).send("Gallery not found");
+      return new HttpError("Galleries not found", 404);
     }
 
-    const images = await Image.find({ _id: { $in: gallery.images } });
-
-    res.status(200).json({ images });
+    res.status(200).json({ gallery });
   } catch (error) {
-    console.error(error);
-    res.status(500).send("Error fetching gallery images");
-  }
-};
-
-/**
- * @method  getGalleryImageById
- * @param {*} req
- * @param {*} res
- * @returns image by id
- */
-export const getGalleryImageById = async (req, res) => {
-  try {
-    const imageId = req.params.imageId;
-    const image = await Image.findById(imageId);
-    if (image) {
-      res.set("Content-Type", image.contentType);
-      res.set("Cache-Control", "public, max-age=31536000"); // Cache the image for 1 year (in seconds)
-      res.sendFile(path.resolve(image.filePath)); // Serve the file from the filesystem
-    } else {
-      res.status(404).json({ message: "Image not found" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching image", error });
+    return next(ServerError(error));
   }
 };
 
@@ -378,47 +320,56 @@ export const getGalleryImageById = async (req, res) => {
  * @returns gallery is created
  */
 
-export const createGallery = async (req, res) => {
+export const createGallery = async (req, res, next) => {
   console.log(req.body, req.files); // Add this line
 
   const { files, userId } = req;
-  const { galleryName, eventRefId } = req.body;
+  const { galleryName, event, date } = req.body;
 
   try {
-    if (!galleryName) {
-      return res.status(400).json({ error: "Gallery name is required" });
+    if (!galleryName || !event || !date) {
+      return res
+        .status(400)
+        .json({ error: "Gallery details are not completed" });
     }
-    const user = await business.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    const myBusiness = await Business.findById(user.businessId);
+    if (!user || !business) {
+      return next(new HttpError("Invalid Id", 404));
     }
 
-    const imageIds = [];
+    const eventRef = await Event.findById(event);
+    if (!eventRef) {
+      return next(new HttpError("Event not found", 404));
+    }
+
+    const images = [];
 
     for (const file of files) {
-      // No optimization, use the original file path
-      const originalPath = file.path;
+      isImageFile(file.mimetype, next);
 
-      const newImage = new Image({
-        name: file.originalname,
-        filePath: originalPath,
-        contentType: file.mimetype,
-      });
-      await newImage.save();
-      imageIds.push(newImage._id);
+      const uploadedImage = await uploadS3Image(file, "gallery_images/", next);
+
+      if (uploadedImage.uploadedImagePath && uploadedImage.status) {
+        images.push(uploadedImage.uploadedImagePath);
+      }
     }
 
     const newGallery = {
       name: galleryName,
-      images: imageIds,
+      event: eventRef._id,
+      startingDate: date,
+      images,
     };
 
-    if (eventRefId) {
-      newGallery.event = eventRefId;
-    }
+    myBusiness.galleries.push(newGallery);
+    const savedBusiness = await myBusiness.save();
 
-    user.galleries.push(newGallery);
-    await user.save();
+    if (!savedBusiness) {
+      return next(new HttpError("Couldn't save gallery", 404));
+    }
 
     res
       .status(201)
@@ -429,310 +380,125 @@ export const createGallery = async (req, res) => {
   }
 };
 
-/**
- * @method  AddOrUpdateManager
- * @param {*} req
- * @param {*} res
- * @returns Add/Updates business manager information
- */
-export const AddOrUpdateManager = async (req, res) => {
+export const deleteBusinessGallery = async (req, res, next) => {
+  const galleryId = req.params.galleryId;
   const userId = req.userId;
-  const managerId = req.params.id;
-
-  const {
-    managerName,
-    managerSurname,
-    managerDOB,
-    managerAddress,
-    managerIDFront,
-    managerIDBack,
-    managerTitle,
-  } = req.body;
-
   try {
-    let manager;
-    if (managerId === "new") {
-      const newManager = {
-        managerName,
-        managerSurname,
-        managerDOB,
-        managerAddress,
-        managerIDFront,
-        managerIDBack,
-        managerTitle,
-      };
-
-      const user = await business.findOne({ _id: userId });
-      user.managers.push(newManager);
-      await user.save();
-      manager = user.managers[user.managers.length - 1];
-    } else {
-      const user = await User.findOne({ _id: userId });
-      manager = user.managers.id(managerId);
-      if (!manager) {
-        return res.status(404).json({ error: "business manager not found" });
-      }
-      manager.set({
-        managerName,
-        managerSurname,
-        managerDOB,
-        managerAddress,
-        managerIDFront,
-        managerIDBack,
-        managerTitle,
-      });
-      await user.save();
-    }
-    res.status(200).json({
-      message: "business manager updated",
-      managerId: manager._id,
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
     });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-/**
- * @method  deleteOwner
- * @param {*} req
- * @param {*} res
- * @returns deletes owner
- */
-export const deleteOwner = async (req, res) => {
-  const userId = req.userId;
-  const ownerId = req.params.id;
-
-  try {
-    const user = await business.findOne({ _id: userId });
-    const owner = user.owners.id(ownerId);
-
-    if (!owner) {
-      return res.status(404).json({ error: "business owner not found" });
+    const myBusiness = await Business.findById(user.businessId);
+    if (!user || !business) {
+      return next(new HttpError("Invalid Id", 404));
     }
 
-    user.owners.pull(owner);
-    await user.save();
-    res.status(200).json({ message: "business owner deleted" });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-/**
- * @method  deleteManager
- * @param {*} req
- * @param {*} res
- * @returns deletes manager
- */
-export const deleteManager = async (req, res) => {
-  const userId = req.userId;
-  const managerId = req.params.id;
-
-  try {
-    const user = await business.findOne({ _id: userId });
-    const manager = user.managers.id(managerId);
-
-    if (!manager) {
-      return res.status(404).json({ error: "business manager not found" });
+    const deletedGallery = myBusiness.galleries.filter(
+      (gallery) => gallery._id.toString() === galleryId
+    );
+    if (!(deletedGallery.length > 0)) {
+      return next(new HttpError("Gallery not found", 404));
     }
-
-    user.managers.pull(manager);
-    await user.save();
-    res.status(200).json({ message: "business manager deleted" });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-/**
- * @method  updateUserName
- * @param {*} req
- * @param {*} res
- * @returns Changes username
- * need to be merged 1
- */
-export const updateUserName = async (req, res) => {
-  const userId = req.userId;
-  const { newUsername } = req.body;
-
-  try {
-    const user = await business.findByIdAndUpdate(
-      userId,
-      { username: newUsername },
-      { new: true }
+    const remainingGalleries = myBusiness.galleries.filter(
+      (gallery) => gallery._id.toString() !== galleryId
     );
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    myBusiness.galleries = remainingGalleries;
+    const savedBusiness = await myBusiness.save();
+    if (!savedBusiness) {
+      return next(new HttpError("Couldn't delete", 500));
     }
 
-    res
-      .status(200)
-      .json({ message: "Username updated", username: user.username });
+    res.status(200).json({ deletedGallery });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    return next(ServerError(error));
   }
 };
 
-/**
- * @method  updateEmail
- * @param {*} req
- * @param {*} res
- * @returns Changes user email
- * need to be merged 1
- */
-export const updateEmail = async (req, res) => {
+export const getOrganizerDetails = async (req, res, next) => {
   const userId = req.userId;
-  const { newEmail } = req.body;
-
   try {
-    const user = await business.findByIdAndUpdate(
-      userId,
-      { email: newEmail },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    if (!user || !business) {
+      return next(new HttpError("Invalid Id", 404));
     }
 
-    res.status(200).json({ message: "Email updated", email: user.email });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-/**
- * @method  getOrganizerImage
- * @param {*} req
- * @param {*} res
- * @returns gets organizer image by id
- */
-export const getOrganizerImage = async (req, res) => {
-  try {
-    const imageId = req.params.id;
-    // console.log("ImageId:", imageId);
-    const image = await Image.findById(imageId);
-    console.log("Image:", image);
-    if (image) {
-      res.set("Content-Type", image.contentType);
-      res.set("Cache-Control", "public, max-age=31536000"); // Cache the image for 1 year (in seconds)
-      res.sendFile(path.resolve(image.filePath)); // Serve the file from the filesystem
-    } else {
-      res.status(404).json({ message: "Organizer image not found" });
-    }
+    res.status(200).send({
+      business,
+    });
   } catch (error) {
     res.status(500).json({ message: "Error fetching organizer image", error });
   }
 };
 
-/**
- * @method  updateOrganizerImage
- * @param {*} req
- * @param {*} res
- * @returns updates organizer image according ot user id
- */
-
-export const updateOrganizerImage = async (req, res, next) => {
+export const updateOrganizerDetails = async (req, res, next) => {
   const userId = req.userId;
+  const [organizerImage, organizerImageBanner] = req.files;
+  const { companyName, email, phoneNumber, website } = req.body;
 
+  let organizerLink, organizerBannerLink;
   try {
-    const user = await business.findById(userId);
-    if (!user) {
-      return next(new HttpError("User not found", 404));
-    }
-
-    const fileBuffer = req.file.buffer;
-
-    // Check if the file is an image
-    await isImageFile(fileBuffer);
-
-    const newImage = new Image({
-      name: req.file.originalname,
-      filePath: req.file.path,
-      contentType: req.file.mimetype,
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
     });
-    await newImage.save();
-    const organizerImage = newImage._id;
-
-    if (user.organizerImage) {
-      const oldImage = await Image.findById(user.organizerImage);
-      if (oldImage.filePath && fs.existsSync(oldImage.filePath)) {
-        await fs.promises.unlink(oldImage.filePath);
-      }
-      await Image.deleteOne({ _id: user.organizerImage });
+    const myBusiness = await Business.findById(user.businessId);
+    if (!user || !business) {
+      return next(new HttpError("Invalid Id", 404));
     }
 
-    user.set({ organizerImage });
-    await user.save();
+    if (organizerImage || organizerImageBanner) {
+      console.log(organizerImage, organizerImageBanner);
+      if (organizerImageBanner) {
+        isImageFile(organizerImageBanner.mimetype, next);
 
-    res.status(201).send({ id: newImage._id });
-  } catch (error) {
-    console.error(error);
-    return next(new HttpError("Server error", 500));
-  }
-};
+        const uploadedImage = await uploadS3Image(
+          organizerImageBanner,
+          "organizer_images/",
+          next
+        );
 
-/**
- * Name of the method needs to be reviewed and the code inside it.
- * @method  getOrganizersBySlug
- * @param {*} req
- * @param {*} res
- * @returns gets organizer by slugURL
- */
-export const getOrganizersBySlug = async (req, res) => {
-  try {
-    const { urlSlug } = req.params;
-
-    let businessUsers;
-
-    if (urlSlug) {
-      const organizer = await business
-        .findOne({ urlSlug: urlSlug })
-        .populate("organizerImage news events");
-      if (!organizer) {
-        return res.status(404).json({ message: "Organizer not found" });
+        if (uploadedImage.uploadedImagePath && uploadedImage.status) {
+          organizerBannerLink = uploadedImage.uploadedImagePath;
+        }
       }
-      businessUsers = [organizer];
-    } else {
-      businessUsers = await business
-        .find({})
-        .populate("organizerImage news events");
+      if (organizerImage) {
+        isImageFile(organizerImage.mimetype, next);
+
+        const uploadedImage = await uploadS3Image(
+          organizerImage,
+          "organizer_images/",
+          next
+        );
+
+        if (uploadedImage.uploadedImagePath && uploadedImage.status) {
+          organizerLink = uploadedImage.uploadedImagePath;
+        }
+      }
     }
 
-    const organizers = await Promise.all(
-      // needs to be reviewed
-      businessUsers.map(async (user) => {
-        const sortedEvents = user.events
-          .filter((event) => event.eventStart < new Date())
-          .sort((a, b) => b.eventStart - a.eventStart)
-          .slice(0, 20);
-        const lastNews = user.news.sort((a, b) => b.date - a.date)[0];
-        const galleryIds = user.galleries.map((gallery) => gallery._id); // Extract gallery IDs
+    myBusiness.company.companyName = companyName;
+    myBusiness.contactInformation.email = email;
+    myBusiness.contactInformation.phoneNumber = phoneNumber;
+    myBusiness.contactInformation.website = website;
+    myBusiness.organizerImage = organizerLink
+      ? organizerLink
+      : req.body.organizerImage;
+    myBusiness.organizerImageBanner = organizerBannerLink
+      ? organizerBannerLink
+      : req.body.organizerImageBanner;
 
-        return {
-          organizerId: user._id,
-          organizerName: user.organizerName,
-          companyAddress: user.company.companyAddress,
-          organizerImageId: user.organizerImage
-            ? user.organizerImage._id
-            : null,
-          urlSlug: user.urlSlug,
-          contactInformation: user.contactInformation,
-          description: user.description,
-          socialLinks: user.socialLinks,
-          latestTwoEvents: sortedEvents.slice(0, 2),
-          allPastEvents: sortedEvents,
-          lastNews: lastNews,
-          company: user.company,
-          galleryIds: galleryIds, // Include galleryIds in the response
-        };
-      })
-    );
+    const savedBusiness = myBusiness.save();
 
-    res.status(200).json(organizers);
+    if (!savedBusiness) {
+      return next(new HttpError("Couldn't update", 500));
+    }
+
+    res.status(200).send({
+      business: myBusiness,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching organizers", error });
+    res.status(500).json({ message: "Error fetching organizer image", error });
   }
 };
 

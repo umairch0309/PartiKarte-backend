@@ -28,14 +28,17 @@ const gallerySchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  startingDate: {
+    type: Date,
+    required: true,
+  },
   event: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Event",
   },
   images: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Image",
+      type: String,
     },
   ],
 });
@@ -52,13 +55,10 @@ const certificateSchema = new mongoose.Schema({
 
 const businessUserSchema = new mongoose.Schema(
   {
-    organizerName: {
-      type: String,
-      required: false,
-      unique: true,
-      trim: true,
-    },
     organizerImage: {
+      type: String,
+    },
+    organizerImageBanner: {
       type: String,
     },
     urlSlug: {
