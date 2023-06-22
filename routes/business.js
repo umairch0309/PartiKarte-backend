@@ -8,7 +8,6 @@ import {
   updateBusinessMarketingInformation,
   getBusinessGallery,
   createGallery,
-  addOrUpdateNews,
   updateProfile,
   setSocialLink,
   getAllGalleries,
@@ -63,7 +62,5 @@ router.delete("/gallery/:galleryId", verifyToken, deleteBusinessGallery);
 
 router.get("/organizer-details", verifyToken, getOrganizerDetails);
 router.patch("/organizer-details/update", verifyToken, updateOrganizerDetails);
-
-router.put("/news/:newsId", verifyToken, addOrUpdateNews);
 
 export { router as business };

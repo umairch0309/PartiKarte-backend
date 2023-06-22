@@ -2,15 +2,13 @@ import mongoose from "mongoose";
 import uniqueValidator from "mongoose-unique-validator";
 
 const newsSchema = new mongoose.Schema({
-  header: {
+  name: {
     type: String,
     required: true,
-    trim: true,
   },
-  text: {
+  description: {
     type: String,
     required: true,
-    trim: true,
   },
   date: {
     type: Date,
@@ -19,6 +17,11 @@ const newsSchema = new mongoose.Schema({
   businessId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Business",
+  },
+  images: [{ type: String }],
+  eventId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Event",
   },
 });
 

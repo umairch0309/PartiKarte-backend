@@ -106,11 +106,6 @@ const eventSchema = new mongoose.Schema({
   eventDescription: {
     type: String,
   },
-  // eventBanner: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "Image",
-  //   required: true,
-  // },
   eventBanner: {
     type: String,
     required: true,
@@ -125,6 +120,12 @@ const eventSchema = new mongoose.Schema({
     required: true,
   },
   tickets: [ticketSchema],
+  news: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "News",
+    },
+  ],
 });
 
 const Event = mongoose.model("Event", eventSchema);

@@ -81,8 +81,6 @@ export const createNewEvent = async (req, res, next) => {
 
     let eventBannerLink = "";
 
-    console.log("upload image", uploadedEventBanner);
-
     if (uploadedEventBanner.uploadedImagePath && uploadedEventBanner.status) {
       eventBannerLink = uploadedEventBanner.uploadedImagePath;
     }

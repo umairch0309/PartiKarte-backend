@@ -1,7 +1,3 @@
-import business from "../models/business.js";
-import Image from "../models/image.js";
-import path from "path";
-import fs from "fs";
 import { isImageFile } from "../helpers/helpers.js";
 import uploadS3Image from "../utils/uploadS3Image.js";
 import HttpError, { ServerError } from "../helpers/HttpError.js";
@@ -499,58 +495,6 @@ export const updateOrganizerDetails = async (req, res, next) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching organizer image", error });
-  }
-};
-
-/**
- * @method  addOrUpdateNews
- * @param {*} req
- * @param {*} res
- * @returns Add Or updates news
- */
-export const addOrUpdateNews = async (req, res) => {
-  try {
-    const { newsId } = req.params;
-    const { header, text } = req.body;
-    const businessId = req.userId;
-
-    const business = await business.findById(businessId);
-    if (!business) {
-      return res.status(404).send("business not found");
-    }
-
-    if (newsId) {
-      // Update existing news
-      const news = business.news.id(newsId);
-      if (!news) {
-        return res.status(404).send("News not found");
-      }
-
-      if (header) {
-        news.header = header;
-      }
-
-      if (text) {
-        news.text = text;
-      }
-
-      await business.save();
-
-      res.status(200).send(news);
-    } else {
-      // Create new news
-      const newNews = {
-        header,
-        text,
-      };
-
-      business.news.push(newNews);
-      await business.save();
-
-      res.status(201).send(newNews);
-    }
-  } catch (error) {
-    res.status(500).send("Error processing news: " + error.message);
   }
 };
 

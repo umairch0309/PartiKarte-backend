@@ -5,11 +5,13 @@ import { tickets } from "./tickets.js";
 import { contact } from "./contact.js";
 import { documents } from "./documents.js";
 import { auth } from "./auth.routes.js";
+import { news } from "./news.js";
 
 const router = Router();
 
 router.use("/business", business);
 router.use("/auth", auth);
+router.use("/", news);
 router.use("/", events);
 router.use("/", tickets);
 router.use("/", contact);

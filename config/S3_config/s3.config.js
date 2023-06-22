@@ -1,5 +1,6 @@
 import AWS from "aws-sdk";
 import env from "./s3.env.js";
+import { param } from "express-validator";
 
 export const s3Client = new AWS.S3({
   accessKeyId: env.AWS_ACCESS_KEY,
