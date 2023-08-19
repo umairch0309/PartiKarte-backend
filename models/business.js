@@ -86,15 +86,7 @@ const businessUserSchema = new mongoose.Schema(
         type: String,
         trim: true,
       },
-      website: {
-        type: String,
-        trim: true,
-      },
-      twitter: {
-        type: String,
-        trim: true,
-      },
-      other: {
+      linkedin: {
         type: String,
         trim: true,
       },

@@ -10,6 +10,7 @@ import {
   createGallery,
   updateProfile,
   setSocialLink,
+  deleteSocialLink,
   getAllGalleries,
   deleteBusinessGallery,
   getOrganizerDetails,
@@ -39,6 +40,7 @@ router.put(
 router.put("/update-profile", verifyToken, updateProfile);
 
 router.put("/set-social-link", verifyToken, setSocialLink);
+router.delete("/delete-social-link/:platform", verifyToken, deleteSocialLink);
 
 // business manager routes
 router.get("/business-managers", verifyToken, getAllBusinessManagers);

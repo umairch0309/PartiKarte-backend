@@ -16,5 +16,4 @@ router.use("/", events);
 router.use("/", tickets);
 router.use("/", contact);
 router.use("/documents", documents);
-router.use("/", documents);
 export default router;

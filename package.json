@@ -32,7 +32,7 @@
   },
   "type": "module",
   "scripts": {
-    "devStart": "nodemon server.js",
+    "dev": "nodemon server.js",
     "start": "node server.js"
   },
   "devDependencies": {

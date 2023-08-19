@@ -38,16 +38,21 @@ export const register = async (req, res, next) => {
 
   try {
     // Validate user input
-    const { error } = userSchema.validate({ email, username, password });
-    if (error) throw error;
+    // const { error } = userSchema.validate({ email });
+    // if (error) throw error;
 
     // Check if user already exists
     const existingUser = await User.findOne({
       $or: [{ email }, { username }],
     });
+
+    console.log(email, username);
+
     if (existingUser) {
-      return next(new HttpError("Username or email already taken", 409));
+      return next(new HttpError("Username or email already taken", 404));
     }
+
+    console.log(existingUser);
 
     // Hash the password
     const salt = await bcrypt.genSalt(10);
@@ -122,18 +127,22 @@ export const register = async (req, res, next) => {
  */
 export const authenticate = async (req, res, next) => {
   const { email, password } = req.body;
+
   if (!email || !password) {
     return next(new HttpError("Please provide a email and password", 400));
   }
+
   try {
     const foundPerson = await findBusinessAndUser({ email });
     const { user, business } = foundPerson;
+
     if (!user) {
       return next(new HttpError("Invalid email or password", 401));
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
     console.log(isValidPassword);
+
     if (!isValidPassword) {
       return next(new HttpError("Invalid email or password", 401));
     }
@@ -143,10 +152,13 @@ export const authenticate = async (req, res, next) => {
     });
 
     res.status(200).json({
-      userId: user._id,
-      token,
-      role: user.role,
-      businessId: user.businessId,
+      message: "Login successful",
+      data: {
+        userId: user._id,
+        token,
+        role: user.role,
+        businessId: user.businessId,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -166,13 +178,16 @@ export const updatePassword = async (req, res, next) => {
   const { newPassword, password } = req.body;
 
   try {
-    const { user, business } = await findBusinessAndUser({ _id: userId });
-    if (!user || !business) {
-      return next(new HttpError("Invalid user id", 400));
+    if (newPassword === password) {
+      return next(new HttpError("Old and new passwords cannot be same.", 400));
     }
 
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid user id", 404));
+    }
     const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log(isValidPassword);
+
     if (!isValidPassword) {
       return next(new HttpError("Invalid old password", 400));
     }
@@ -182,7 +197,7 @@ export const updatePassword = async (req, res, next) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { password: hashedPassword },
+      { password: hashedPassword, salt },
       { new: true }
     );
 
@@ -267,5 +282,24 @@ export const resetPassword = async (req, res, next) => {
   } catch (error) {
     console.error(error);
     return next(ServerError(error));
+  }
+};
+
+export const profileDetails = async (req, res, next) => {
+  const userId = req.userId;
+
+  console.log(userId);
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid user id", 400));
+    }
+
+    res
+      .status(200)
+      .json({ message: "Business user", data: { user, business } });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 };

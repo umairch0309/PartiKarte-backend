@@ -4,8 +4,13 @@ import multer from "multer";
 import dotenv from "dotenv";
 import router from "./routes/index.js";
 import connectDB from "./config/db.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import HttpError from "./helpers/HttpError.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -23,6 +28,11 @@ app.use(express.json());
 app.use(cors());
 
 app.use("/api/", router);
+
+app.use("/", express.static(path.join(__dirname, "./build")));
+app.get("/*", (req, res) => {
+  res.sendFile(path.resolve(__dirname, ".build/index.html"));
+});
 
 app.use((req, res, next) => {
   return next(new HttpError("Could not find this route.", 404));

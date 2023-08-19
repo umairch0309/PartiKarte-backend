@@ -19,7 +19,7 @@ export function calculatePriceWithVAT(price, vatPercentage) {
 }
 
 export const isImageFile = async (type, next) => {
-  const isImage = type.startsWith("image/");
+  const isImage = type?.startsWith("image/");
 
   if (!isImage) {
     return next(new HttpError("Please upload image or valid type.", 400));

@@ -1,7 +1,6 @@
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import s3 from "../config/S3_config/s3.config.js";
-import upload from "../config/S3_config/multer.config.js";
 
 import HttpError from "../helpers/HttpError.js";
 
@@ -9,7 +8,6 @@ const uploadS3Image = async (image, directory, next) => {
   const savePath = `images/${directory}`;
   const fileFormat = `.${image.mimetype.split("/")[1]}`;
   const imageFileName = path.basename(image.fieldname);
-  upload.single("file");
 
   const pathOfImage = savePath + uuidv4() + imageFileName + fileFormat;
 

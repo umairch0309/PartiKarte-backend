@@ -16,11 +16,21 @@ export const updateBusinessInformation = async (req, res, next) => {
   const userId = req.userId;
   const {
     // organizerName,
-    taxNumber,
+    companyVAT,
     companyName,
-    companyAddress,
     companyRegistryNumber,
+    addressDescription,
+    country,
+    city,
+    postalCode,
   } = req.body;
+
+  const companyAddress = {
+    addressDescription,
+    country,
+    city,
+    postalCode,
+  };
 
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
@@ -30,29 +40,14 @@ export const updateBusinessInformation = async (req, res, next) => {
 
     let update = {};
 
-    // ORGANIZER NAME CHANGE --- IF APPLIED
-
-    // if (organizerName) {
-    //   update["organizerName"] = organizerName;
-    //   const dateString = new Date().toISOString().split("T")[0];
-    //   const newUrlSlug = generateUrlSlug(organizerName, dateString);
-
-    //   const existingUserWithSlug = await business.findOne({
-    //     urlSlug: newUrlSlug,
-    //   });
-    //   if (
-    //     existingUserWithSlug &&
-    //     existingUserWithSlug._id.toString() !== businessId
-    //   ) {
-    //     return next(new HttpError("URL slug already exists", 409));
-    //   }
-
-    //   update["urlSlug"] = newUrlSlug;
-    // }
-
-    if (taxNumber) update["company.taxNumber"] = taxNumber;
+    if (companyVAT) update["company.companyVAT"] = companyVAT;
     if (companyName) update["company.companyName"] = companyName;
-    if (companyAddress) update["company.companyAddress"] = companyAddress;
+    if (addressDescription)
+      update["company.companyAddress.addressDescription"] = addressDescription;
+    if (country) update["company.companyAddress.country"] = country;
+    if (postalCode) update["company.companyAddress.postalCode"] = postalCode;
+    if (city) update["company.companyAddress.city"] = city;
+
     if (companyRegistryNumber)
       update["company.companyRegistryNumber"] = companyRegistryNumber;
 
@@ -136,7 +131,7 @@ export const updateBusinessFinancialInformation = async (req, res, next) => {
     const updatedBusiness = await mybusiness.save();
 
     res.status(200).json({
-      message: "Financial information updated",
+      message: "Financial information updated.",
       updatedBusiness: updatedBusiness.financialInformation,
     });
   } catch (error) {
@@ -170,7 +165,7 @@ export const updateBusinessMarketingInformation = async (req, res, next) => {
     const updatedBusiness = await mybusiness.save();
 
     res.status(200).json({
-      message: "business settings updated",
+      message: "Marketing settings updated.",
       updatedBusiness: updatedBusiness.marketingInformation,
     });
   } catch (error) {
@@ -187,9 +182,6 @@ export const updateBusinessMarketingInformation = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   const userId = req.userId;
-  const { username, email } = req.body;
-
-  const { profile_image } = req.files;
 
   let uploadedImage;
 
@@ -197,31 +189,18 @@ export const updateProfile = async (req, res, next) => {
     const { user, business } = await findBusinessAndUser({
       _id: userId,
     });
-
     if (!user || !business) {
       return next(new HttpError("Invalid Id", 404));
     }
 
-    const { user: duplicateUser, business: duplicateBusiness } =
-      await findBusinessAndUser({
-        _id: userId,
-        ...(email && { email }),
-        ...(username && { username }),
-      });
-
-    if (duplicateUser && duplicateBusiness && (username || email)) {
-      return next(
-        new HttpError("Please choose a unique username or email", 409)
-      );
-    }
-
     const myUser = await User.findById(user._id);
 
-    if (myUser && req.files && profile_image) {
-      isImageFile(profile_image, next);
+    if (myUser && req.files) {
+      console.log(req.files[0]);
+      isImageFile(req.files[0]?.mimetype, next);
 
       const uploadedImageObj = await uploadS3Image(
-        profile_image,
+        req.files[0],
         "profile_images/",
         next
       );
@@ -229,23 +208,15 @@ export const updateProfile = async (req, res, next) => {
         uploadedImage = uploadedImageObj.uploadedImagePath;
       }
     }
-
-    if (email) {
-      myUser.email = email;
-    }
-
-    if (username) {
-      myUser.username = username;
-    }
-
     if (uploadedImage) {
       myUser.profile_image = uploadedImage;
     }
 
+    console.log(uploadedImage);
     const updatedUser = await myUser.save();
 
     res.status(200).json({
-      message: "Business settings updated",
+      message: "Profile image updated successfully.",
       updatedUser,
     });
   } catch (error) {
@@ -431,7 +402,7 @@ export const getOrganizerDetails = async (req, res, next) => {
 export const updateOrganizerDetails = async (req, res, next) => {
   const userId = req.userId;
   const [organizerImage, organizerImageBanner] = req.files;
-  const { companyName, email, phoneNumber, website } = req.body;
+  const { companyName, email, phoneNumber, website, description } = req.body;
 
   let organizerLink, organizerBannerLink;
   try {
@@ -444,7 +415,6 @@ export const updateOrganizerDetails = async (req, res, next) => {
     }
 
     if (organizerImage || organizerImageBanner) {
-      console.log(organizerImage, organizerImageBanner);
       if (organizerImageBanner) {
         isImageFile(organizerImageBanner.mimetype, next);
 
@@ -472,17 +442,14 @@ export const updateOrganizerDetails = async (req, res, next) => {
         }
       }
     }
-
+    console.log(organizerLink, organizerBannerLink);
     myBusiness.company.companyName = companyName;
     myBusiness.contactInformation.email = email;
     myBusiness.contactInformation.phoneNumber = phoneNumber;
-    myBusiness.contactInformation.website = website;
-    myBusiness.organizerImage = organizerLink
-      ? organizerLink
-      : req.body.organizerImage;
-    myBusiness.organizerImageBanner = organizerBannerLink
-      ? organizerBannerLink
-      : req.body.organizerImageBanner;
+    myBusiness.description = description;
+    if (organizerLink) myBusiness.organizerImage = organizerLink;
+    if (organizerBannerLink)
+      myBusiness.organizerImageBanner = organizerBannerLink;
 
     const savedBusiness = myBusiness.save();
 
@@ -491,7 +458,8 @@ export const updateOrganizerDetails = async (req, res, next) => {
     }
 
     res.status(200).send({
-      business: myBusiness,
+      message: "Organizer details updated successfully",
+      data: { business: myBusiness },
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching organizer image", error });
@@ -512,24 +480,44 @@ export const setSocialLink = async (req, res, next) => {
     }
 
     // Set the social link based on the specified platform
-    switch (platform) {
-      case "facebook":
-        myBusiness.socialLinks.facebook = link;
-        break;
-      case "instagram":
-        myBusiness.socialLinks.instagram = link;
-        break;
-      case "website":
-        myBusiness.socialLinks.website = link;
-        break;
-      case "twitter":
-        myBusiness.socialLinks.twitter = link;
-        break;
-      case "other":
-        myBusiness.socialLinks.other = link;
-        break;
-      default:
-        return next(new HttpError("Invalid platform", 400));
+    myBusiness.socialLinks[platform] = link;
+
+    const updatedBusiness = await myBusiness.save();
+
+    if (!updatedBusiness) {
+      return next(new HttpError("Couldn't perform task", 500));
+    }
+
+    res.status(200).json({
+      message: "Social link saved successfully.",
+      businessLinks: updatedBusiness.socialLinks,
+    });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
+export const deleteSocialLink = async (req, res, next) => {
+  const userId = req.userId;
+  const platform = req.params.platform;
+
+  console.log(platform);
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    const myBusiness = await Business.findById(business._id);
+
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    // Delete the social link based on the specified platform
+    if (myBusiness.socialLinks.hasOwnProperty(platform)) {
+      myBusiness.socialLinks[platform] = undefined;
+      console.log(
+        "Social link deleted. Updated socialLinks:",
+        myBusiness.socialLinks
+      );
     }
 
     const updatedBusiness = await myBusiness.save();
@@ -539,7 +527,7 @@ export const setSocialLink = async (req, res, next) => {
     }
 
     res.status(200).json({
-      message: "Social link updated",
+      message: "Social link deleted successfully.",
       businessLinks: updatedBusiness.socialLinks,
     });
   } catch (error) {
