@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import timestamps from "mongoose-timestamp";
 
 const addressSchema = new mongoose.Schema({
   addressDescription: {
@@ -39,6 +40,11 @@ const ticketSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  paymentType: {
+    type: String,
+    enum: ["paid", "free"],
+    required: true,
+  },
   capacityLimitation: {
     type: String,
     enum: ["limited", "unlimited"],
@@ -67,6 +73,14 @@ const ticketSchema = new mongoose.Schema({
   descriptionTicket: {
     type: String,
     required: true,
+  },
+  ticketOrders: {
+    type: Number,
+    default: 0,
+  },
+  revenue: {
+    type: Number,
+    default: 0,
   },
 });
 
@@ -114,6 +128,14 @@ const eventSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  ticketsSold: {
+    type: Number,
+    default: 0,
+  },
+  revenue: {
+    type: Number,
+    default: 0,
+  },
   businessId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Business",
@@ -127,6 +149,9 @@ const eventSchema = new mongoose.Schema({
     },
   ],
 });
+
+eventSchema.plugin(timestamps);
+ticketSchema.plugin(timestamps);
 
 const Event = mongoose.model("Event", eventSchema);
 

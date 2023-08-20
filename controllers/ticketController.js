@@ -63,11 +63,14 @@ export const createNewTicket = async (req, res, next) => {
     validTo,
     maxCapacity,
     capacityLimitation,
+    paidTicket,
     price,
     vatPercentage,
     descriptionWeb,
     descriptionTicket,
   } = req.body;
+
+  console.log(req.body);
 
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
@@ -79,15 +82,33 @@ export const createNewTicket = async (req, res, next) => {
       return next(new HttpError("Event not found", 404));
     }
 
-    const { vat, priceWithVAT } = calculatePriceWithVAT(price, vatPercentage);
+    const { vat, priceWithVAT } = calculatePriceWithVAT(
+      new Boolean(paidTicket) == true && parseFloat(price) > 0
+        ? parseFloat(price)
+        : 0,
+      vatPercentage
+    );
 
     const newTicket = {
       ticketName,
       validFrom,
       validTo,
-      maxCapacity,
-      capacityLimitation,
-      price,
+      maxCapacity:
+        new Boolean(capacityLimitation) == true && parseInt(maxCapacity) > 0
+          ? parseInt(maxCapacity)
+          : 999999999,
+      capacityLimitation:
+        new Boolean(capacityLimitation) == true && parseInt(maxCapacity) > 0
+          ? "limited"
+          : "unlimited",
+      paymentType:
+        new Boolean(paidTicket) == true && parseFloat(price) > 0
+          ? "paid"
+          : "free",
+      price:
+        new Boolean(paidTicket) == true && parseFloat(price) > 0
+          ? parseFloat(price)
+          : 0,
       vatPercentage,
       vat,
       priceWithVAT,
@@ -98,7 +119,14 @@ export const createNewTicket = async (req, res, next) => {
     event.tickets.push(newTicket);
     const savedEvent = await event.save();
 
-    res.status(200).json({ message: "Ticket created", ticket: newTicket });
+    if (!savedEvent) {
+      return next(new HttpError("Something went wrong!", 500));
+    }
+
+    res.status(200).json({
+      message: "Ticket created successfully for selected event.",
+      ticket: newTicket,
+    });
   } catch (error) {
     return next(ServerError(error));
   }

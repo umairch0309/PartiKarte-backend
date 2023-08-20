@@ -18,7 +18,9 @@ export const getAllEvents = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    const events = await Event.find({ businessId: business._id });
+    const events = await Event.find({ businessId: business._id }).sort({
+      _id: -1,
+    });
 
     res.status(200).json({ events });
   } catch (error) {
@@ -62,7 +64,9 @@ export const createNewEvent = async (req, res, next) => {
     eventDescription,
   } = req.body;
 
-  const [eventBanner] = req.files;
+  const eventBanner = req.files[0];
+
+  console.log(eventBanner);
 
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
