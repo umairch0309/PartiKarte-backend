@@ -266,7 +266,7 @@ export const getBusinessGallery = async (req, res, next) => {
       return next(new HttpError("Invalid Id", 404));
     }
 
-    const gallery = business.galleries.filter(
+    const gallery = business.galleries.find(
       (gallery) => gallery._id.toString() === galleryId
     );
 
@@ -347,6 +347,72 @@ export const createGallery = async (req, res, next) => {
   }
 };
 
+export const updateGallery = async (req, res, next) => {
+  console.log(req.body, req.files); // Add this line
+
+  const { files, userId } = req;
+  const { galleryId } = req.params;
+  const { galleryName, event, date, images } = req.body;
+
+  try {
+    if (!galleryName || !event || !date) {
+      return res
+        .status(400)
+        .json({ error: "Gallery details are not completed" });
+    }
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+
+    const myBusiness = await Business.findById(user.businessId);
+    if (!user || !business) {
+      return next(new HttpError("Invalid Id", 404));
+    }
+
+    const eventRef = await Event.findById(event);
+    if (!eventRef) {
+      return next(new HttpError("Event not found", 404));
+    }
+
+    const gallery = myBusiness.galleries.find(
+      (gallery) => gallery._id.toString() === galleryId
+    );
+
+    if (!gallery) {
+      return next(new HttpError("Gallery not found", 404));
+    }
+
+    const newImages = [...images];
+
+    for (const file of files) {
+      isImageFile(file.mimetype, next);
+
+      const uploadedImage = await uploadS3Image(file, "gallery_images/", next);
+
+      if (uploadedImage.uploadedImagePath && uploadedImage.status) {
+        newImages.push(uploadedImage.uploadedImagePath);
+      }
+    }
+
+    gallery.name = galleryName;
+    gallery.event = event;
+    gallery.startingDate = date;
+    gallery.images = newImages;
+    const savedBusiness = await myBusiness.save();
+
+    if (!savedBusiness) {
+      return next(new HttpError("Couldn't save gallery", 404));
+    }
+
+    res
+      .status(201)
+      .send({ message: "Gallery updated successfully", gallery: gallery });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
+  }
+};
+
 export const deleteBusinessGallery = async (req, res, next) => {
   const galleryId = req.params.galleryId;
   const userId = req.userId;
@@ -362,9 +428,11 @@ export const deleteBusinessGallery = async (req, res, next) => {
     const deletedGallery = myBusiness.galleries.filter(
       (gallery) => gallery._id.toString() === galleryId
     );
+
     if (!(deletedGallery.length > 0)) {
       return next(new HttpError("Gallery not found", 404));
     }
+
     const remainingGalleries = myBusiness.galleries.filter(
       (gallery) => gallery._id.toString() !== galleryId
     );
@@ -375,9 +443,103 @@ export const deleteBusinessGallery = async (req, res, next) => {
       return next(new HttpError("Couldn't delete", 500));
     }
 
-    res.status(200).json({ deletedGallery });
+    res
+      .status(200)
+      .json({ message: "Gallery has been deleted.", deletedGallery });
   } catch (error) {
     return next(ServerError(error));
+  }
+};
+
+export const deleteImageFromGallery = async (req, res, next) => {
+  const { galleryId, imageId } = req.params;
+
+  try {
+    const { userId } = req;
+    const { user } = await findBusinessAndUser({
+      _id: userId,
+    });
+
+    if (!user) {
+      return next(new HttpError("Invalid Id", 404));
+    }
+
+    const myBusiness = await Business.findOne({
+      _id: user.businessId,
+    });
+
+    if (!myBusiness) {
+      return next(new HttpError("Business or Gallery not found", 404));
+    }
+
+    const gallery = myBusiness.galleries.find(
+      (g) => g._id.toString() === galleryId
+    );
+
+    if (!gallery) {
+      return next(new HttpError("Gallery not found", 404));
+    }
+    const updatedImages = gallery.images.filter(
+      (image, index) => index !== parseInt(imageId)
+    );
+
+    if (gallery.galleryPreview === parseInt(imageId)) {
+      gallery.galleryPreview = 0;
+    }
+
+    gallery.images = updatedImages;
+
+    await myBusiness.save();
+
+    res.status(200).json({ message: "Image deleted successfully", gallery });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
+  }
+};
+
+export const setImageAsPreview = async (req, res, next) => {
+  const { galleryId, imageId } = req.params;
+
+  try {
+    const { userId } = req;
+    const { user, business } = await findBusinessAndUser({
+      _id: userId,
+    });
+    if (!user || !business) {
+      return next(new HttpError("Invalid Id", 404));
+    }
+    const myBusiness = await Business.findOne({
+      _id: user.businessId,
+    });
+
+    if (!myBusiness) {
+      return next(new HttpError("Business or Gallery not found", 404));
+    }
+
+    const gallery = myBusiness.galleries.find(
+      (g) => g._id.toString() === galleryId
+    );
+
+    if (!gallery) {
+      return next(new HttpError("Gallery not found", 404));
+    }
+    console.log(imageId);
+    const index = gallery?.images?.findIndex(
+      (image, index) => index === parseInt(imageId)
+    );
+    console.log(index);
+
+    gallery.galleryPreview = index > 0 ? index : 0;
+
+    await myBusiness.save();
+
+    res
+      .status(200)
+      .json({ message: "Image marked as gallery preview.", gallery });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
   }
 };
 

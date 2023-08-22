@@ -62,6 +62,7 @@ export const createNewEvent = async (req, res, next) => {
     eventCoordinatesY,
     eventVenue,
     eventDescription,
+    eventLink,
   } = req.body;
 
   const eventBanner = req.files[0];
@@ -97,13 +98,14 @@ export const createNewEvent = async (req, res, next) => {
       eventBanner: eventBannerLink,
       eventCategory,
       eventAddress: {
-        addressDescription,
-        city,
-        postalCode,
-        country,
+        ...(addressDescription && { addressDescription }),
+        ...(city && { city }),
+        ...(postalCode && { postalCode }),
+        ...(country && { country }),
+        ...(eventLink && { eventLink }),
       },
-      eventCoordinatesX,
-      eventCoordinatesY,
+      ...(eventCoordinatesX && { eventCoordinatesX }),
+      ...(eventCoordinatesY && { eventCoordinatesY }),
       eventVenue,
       eventDescription,
       businessId: myBusiness._id,
@@ -142,6 +144,7 @@ export const updateEvent = async (req, res, next) => {
     eventCoordinatesY,
     eventVenue,
     eventDescription,
+    eventLink,
   } = req.body;
   const [eventBanner] = req.files;
 
@@ -176,13 +179,14 @@ export const updateEvent = async (req, res, next) => {
       eventBanner: eventBannerLink,
       eventCategory,
       eventAddress: {
-        addressDescription,
-        city,
-        postalCode,
-        country,
+        ...(addressDescription && { addressDescription }),
+        ...(city && { city }),
+        ...(postalCode && { postalCode }),
+        ...(country && { country }),
+        ...(eventLink && { eventLink }),
       },
-      eventCoordinatesX,
-      eventCoordinatesY,
+      ...(eventCoordinatesX && { eventCoordinatesX }),
+      ...(eventCoordinatesY && { eventCoordinatesY }),
       eventVenue,
       eventDescription,
     };

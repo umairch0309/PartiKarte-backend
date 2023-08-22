@@ -15,6 +15,9 @@ import {
   deleteBusinessGallery,
   getOrganizerDetails,
   updateOrganizerDetails,
+  deleteImageFromGallery,
+  setImageAsPreview,
+  updateGallery,
 } from "../controllers/businessControllers.js";
 import {
   addBusinessManager,
@@ -58,9 +61,20 @@ router.delete(
 
 // owners routes end
 router.put("/gallery/add", verifyToken, createGallery);
+router.put("/gallery/update/:galleryId", verifyToken, updateGallery);
 router.get("/gallery", verifyToken, getAllGalleries);
 router.get("/gallery/:galleryId", verifyToken, getBusinessGallery);
 router.delete("/gallery/:galleryId", verifyToken, deleteBusinessGallery);
+router.delete(
+  "/gallery/:galleryId/image/:imageId",
+  verifyToken,
+  deleteImageFromGallery
+);
+router.patch(
+  "/gallery/:galleryId/image/:imageId",
+  verifyToken,
+  setImageAsPreview
+);
 
 router.get("/organizer-details", verifyToken, getOrganizerDetails);
 router.patch("/organizer-details/update", verifyToken, updateOrganizerDetails);

@@ -24,9 +24,7 @@ export const getAllNews = async (req, res, next) => {
       return next(new HttpError("Couldn't find news", 404));
     }
 
-    res
-      .status(200)
-      .send({ message: "News updated successfully", news: existingNews });
+    res.status(200).send({ message: "News!", news: existingNews });
   } catch (error) {
     console.error(error);
     res.status(500).send("Server error");
@@ -77,6 +75,7 @@ export const createNews = async (req, res, next) => {
       businessId: business._id,
       description,
     });
+
     myBusiness.news.push(newNews._id);
     eventRef.news.push(newNews._id);
     const savedNews = await newNews.save();
@@ -90,7 +89,7 @@ export const createNews = async (req, res, next) => {
 
     res
       .status(201)
-      .send({ message: "News created successfully", news: savedNews });
+      .send({ message: "News added successfully", news: savedNews });
   } catch (error) {
     console.error(error);
     res.status(500).send("Server error");
@@ -131,8 +130,8 @@ export const updateNews = async (req, res, next) => {
       );
       await existingEventRef.save();
     }
-
-    const images = [...req.body.images]; // Clone existing images array
+    console.log(req.body.images);
+    const images = req.body.images; // Clone existing images array
 
     // Handle new images
     if (files.length > 0) {
@@ -146,6 +145,8 @@ export const updateNews = async (req, res, next) => {
         }
       }
     }
+
+    console.log(images, "after");
 
     // Update the news document
     existingNews.name = name;

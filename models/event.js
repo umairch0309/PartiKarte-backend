@@ -4,20 +4,22 @@ import timestamps from "mongoose-timestamp";
 const addressSchema = new mongoose.Schema({
   addressDescription: {
     type: String,
+    trim: true,
+  },
+  eventLink: {
+    type: String,
+    trim: true,
   },
   city: {
     type: String,
-    required: true,
     trim: true,
   },
   postalCode: {
     type: String,
-    required: true,
     trim: true,
   },
   country: {
     type: String,
-    required: true,
     trim: true,
   },
 });

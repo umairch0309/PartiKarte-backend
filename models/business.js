@@ -36,6 +36,10 @@ const gallerySchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Event",
   },
+  galleryPreview: {
+    type: Number,
+    default: 0,
+  },
   images: [
     {
       type: String,

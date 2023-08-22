@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import router from "./routes/index.js";
 import connectDB from "./config/db.js";
 import path from "path";
+import morgan from "morgan";
 import { fileURLToPath } from "url";
 
 import HttpError from "./helpers/HttpError.js";
@@ -25,6 +26,7 @@ app.use(upload.any());
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(morgan("dev"));
 app.use(cors());
 
 app.use("/api/", router);

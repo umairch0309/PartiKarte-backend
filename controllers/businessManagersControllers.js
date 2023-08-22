@@ -2,7 +2,10 @@ import bcrypt from "bcrypt";
 import { isImageFile } from "../helpers/helpers.js";
 import { userSchema } from "../helpers/validation.js";
 import uploadS3Image from "../utils/uploadS3Image.js";
-import HttpError, { ServerError } from "../helpers/HttpError.js";
+import HttpError, {
+  ServerError,
+  createValidationError,
+} from "../helpers/HttpError.js";
 import { findBusinessAndUser } from "../DAL/common.js";
 import { generateUrlSlug } from "../helpers/helpers.js";
 import Business from "../models/business.js";
@@ -52,7 +55,7 @@ export const addBusinessManager = async (req, res, next) => {
 
   const [IDFront, IDBack] = req.files;
 
-  const username = `${name}${surname}`;
+  const username = `${name}${surname}`.replace(" ", "");
 
   let newUser, myBusiness, savedBusiness;
 
@@ -66,7 +69,11 @@ export const addBusinessManager = async (req, res, next) => {
     }
 
     // Validate user input
-    const { error } = userSchema.validate({ email, username, password });
+    const { error } = userSchema.validate({
+      email,
+      username,
+      password: password || "123456",
+    });
     if (error) throw error;
 
     // Check if user already exists
@@ -91,10 +98,11 @@ export const addBusinessManager = async (req, res, next) => {
     ) {
       // Hash the password
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
+      const hashedPassword = await bcrypt.hash(password || "123456", salt);
 
       newUser = new User({
-        role: "admin",
+        name,
+        surname,
         email,
         username,
         password: hashedPassword,
@@ -128,8 +136,8 @@ export const addBusinessManager = async (req, res, next) => {
     if (!savedBusiness && newUser) {
       await User.findByIdAndDelete(newUser._id);
     }
+    console.log(error);
     if (error.name === "ValidationError") {
-      console.log(createValidationError(error));
       return next(new HttpError("Please enter correct inputs", 409));
     } else {
       return next(new HttpError(error, 500));
