@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import uniqueValidator from "mongoose-unique-validator";
+import timestamps from "mongoose-timestamp";
 
 const addressSchema = new mongoose.Schema({
   addressDescription: {
@@ -92,6 +93,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.plugin(uniqueValidator);
+userSchema.plugin(timestamps);
 
 const User = mongoose.model("User", userSchema);
 

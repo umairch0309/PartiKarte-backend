@@ -276,3 +276,35 @@ export const deleteEvent = async (req, res, next) => {
     return next(new HttpError(error.message, 500));
   }
 };
+
+export const getAllEventsForCustomer = async (req, res, next) => {
+  try {
+    const eventsWithTickets = await Event.aggregate([
+      {
+        $match: {
+          tickets: { $exists: true, $not: { $size: 0 } },
+        },
+      },
+      {
+        $sort: {
+          _id: -1,
+        },
+      },
+    ]);
+
+    return res.status(200).json({ events: eventsWithTickets });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
+export const getSingleEventForCustomer = async (req, res, next) => {
+  const { eventId } = req.params;
+  try {
+    const event = await Event.findById(eventId).populate("businessId");
+
+    res.status(200).json({ event });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};

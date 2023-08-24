@@ -8,11 +8,16 @@ import {
   getAllEvents,
   changeEventImage,
   getEvent,
+  getAllEventsForCustomer,
+  getSingleEventForCustomer,
 } from "../controllers/eventControllers.js";
 
 const router = express.Router();
 
 router.get("/events", verifyToken, getAllEvents);
+router.get("/all-events-for-customer", getAllEventsForCustomer);
+router.get("/all-featured-events-for-customer", getAllEvents);
+router.get("/single-event-for-customer/:eventId", getSingleEventForCustomer);
 
 router.get("/events/:eventId", verifyToken, getEvent);
 

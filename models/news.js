@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import uniqueValidator from "mongoose-unique-validator";
+import timestamps from "mongoose-timestamp";
 
 const newsSchema = new mongoose.Schema({
   name: {
@@ -26,6 +27,7 @@ const newsSchema = new mongoose.Schema({
 });
 
 newsSchema.plugin(uniqueValidator);
+newsSchema.plugin(timestamps);
 
 const News = mongoose.model("News", newsSchema);
 
