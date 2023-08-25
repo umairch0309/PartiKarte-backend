@@ -18,7 +18,7 @@ dotenv.config();
 connectDB();
 
 const app = express();
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 5600;
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
