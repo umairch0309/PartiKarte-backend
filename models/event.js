@@ -30,6 +30,11 @@ const ticketSchema = new mongoose.Schema({
     trim: true,
     required: true,
   },
+  ticketType: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   validFrom: {
     type: Date,
     required: true,
@@ -41,6 +46,9 @@ const ticketSchema = new mongoose.Schema({
   maxCapacity: {
     type: Number,
     required: true,
+  },
+  remainingCapacity: {
+    type: Number,
   },
   paymentType: {
     type: String,

@@ -10,11 +10,14 @@ import {
   getEvent,
   getAllEventsForCustomer,
   getSingleEventForCustomer,
+  getActiveEvents,
 } from "../controllers/eventControllers.js";
 
 const router = express.Router();
 
 router.get("/events", verifyToken, getAllEvents);
+router.get("/events/active", verifyToken, getActiveEvents);
+
 router.get("/all-events-for-customer", getAllEventsForCustomer);
 router.get("/all-featured-events-for-customer", getAllEvents);
 router.get("/single-event-for-customer/:eventId", getSingleEventForCustomer);

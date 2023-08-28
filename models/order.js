@@ -6,10 +6,6 @@ const addressSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-  eventLink: {
-    type: String,
-    trim: true,
-  },
   city: {
     type: String,
     trim: true,
@@ -38,9 +34,6 @@ const orderSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-  customerSurname: {
-    type: String,
-  },
   customerEmail: {
     type: String,
     required: true,
@@ -48,9 +41,17 @@ const orderSchema = new mongoose.Schema({
   customerPhoneNumber: {
     type: String,
   },
+  purchaseId: {
+    type: String,
+    default: "not-a-card-payment",
+  },
   orderAmount: {
     type: Number,
     required: true,
+  },
+  paymentStatus: {
+    type: Boolean,
+    default: false,
   },
   customerAddress: addressSchema,
   noOfTickets: {
@@ -65,6 +66,7 @@ const orderSchema = new mongoose.Schema({
   eventId: {
     type: mongoose.Types.ObjectId,
     ref: "Event",
+    required: true,
   },
 });
 

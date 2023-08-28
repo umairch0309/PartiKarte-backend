@@ -1,12 +1,8 @@
-import business from "../models/business.js";
-import Image from "../models/image.js";
-import fs from "fs";
 import { preprocessImage, isImageFile } from "../helpers/helpers.js";
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { findBusinessAndUser } from "../DAL/common.js";
 import Event from "../models/event.js";
 import Business from "../models/business.js";
-import mongoose from "mongoose";
 import uploadS3Image from "../utils/uploadS3Image.js";
 
 export const getAllEvents = async (req, res, next) => {
@@ -20,6 +16,28 @@ export const getAllEvents = async (req, res, next) => {
 
     const events = await Event.find({ businessId: business._id }).sort({
       _id: -1,
+    });
+
+    res.status(200).json({ events });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
+export const getActiveEvents = async (req, res, next) => {
+  const userId = req.userId;
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const currentDate = new Date();
+
+    const events = await Event.find({
+      eventStart: { $lte: currentDate }, // Check if eventStart is less than or equal to currentDate
+      eventEnd: { $gte: currentDate }, // Check if eventEnd is greater than or equal to currentDate
     });
 
     res.status(200).json({ events });
@@ -301,7 +319,12 @@ export const getAllEventsForCustomer = async (req, res, next) => {
 export const getSingleEventForCustomer = async (req, res, next) => {
   const { eventId } = req.params;
   try {
-    const event = await Event.findById(eventId).populate("businessId");
+    let event;
+    if (eventId !== "null" && eventId && eventId !== "undefined") {
+      event = await Event.findById(eventId).populate("businessId");
+    } else {
+      return next(new HttpError("Invalid event id ", 400));
+    }
 
     res.status(200).json({ event });
   } catch (error) {

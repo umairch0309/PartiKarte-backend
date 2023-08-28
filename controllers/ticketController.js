@@ -68,6 +68,7 @@ export const createNewTicket = async (req, res, next) => {
     vatPercentage,
     descriptionWeb,
     descriptionTicket,
+    ticketType,
   } = req.body;
 
   console.log(req.body);
@@ -83,9 +84,7 @@ export const createNewTicket = async (req, res, next) => {
     }
 
     const { vat, priceWithVAT } = calculatePriceWithVAT(
-      new Boolean(paidTicket) == true && parseFloat(price) > 0
-        ? parseFloat(price)
-        : 0,
+      paidTicket == "true" && parseFloat(price) > 0 ? parseFloat(price) : 0,
       vatPercentage
     );
 
@@ -93,27 +92,28 @@ export const createNewTicket = async (req, res, next) => {
       ticketName,
       validFrom,
       validTo,
+      ticketType,
       maxCapacity:
-        new Boolean(capacityLimitation) == true && parseInt(maxCapacity) > 0
+        capacityLimitation == "true" && parseInt(maxCapacity) > 0
           ? parseInt(maxCapacity)
           : 999999999,
       capacityLimitation:
-        new Boolean(capacityLimitation) == true && parseInt(maxCapacity) > 0
+        capacityLimitation == "true" && parseInt(maxCapacity) > 0
           ? "limited"
           : "unlimited",
       paymentType:
-        new Boolean(paidTicket) == true && parseFloat(price) > 0
-          ? "paid"
-          : "free",
+        paidTicket == "true" && parseFloat(price) > 0 ? "paid" : "free",
       price:
-        new Boolean(paidTicket) == true && parseFloat(price) > 0
-          ? parseFloat(price)
-          : 0,
+        paidTicket == "true" && parseFloat(price) > 0 ? parseFloat(price) : 0,
       vatPercentage,
       vat,
       priceWithVAT,
       descriptionWeb,
       descriptionTicket,
+      remainingCapacity:
+        capacityLimitation == "true" && parseInt(maxCapacity) > 0
+          ? parseInt(maxCapacity)
+          : 999999999,
     };
 
     event.tickets.push(newTicket);
@@ -145,6 +145,7 @@ export const updateTicket = async (req, res, next) => {
     price,
     vatPercentage,
     descriptionWeb,
+    ticketType,
     descriptionTicket,
   } = req.body;
 
@@ -172,10 +173,20 @@ export const updateTicket = async (req, res, next) => {
       _id: ticketId, // Maintain the same mongoose ObjectId
       ticketName,
       validFrom,
+      ticketType,
       validTo,
-      maxCapacity,
-      capacityLimitation,
-      price,
+      maxCapacity:
+        capacityLimitation == "true" && parseInt(maxCapacity) > 0
+          ? parseInt(maxCapacity)
+          : 999999999,
+      capacityLimitation:
+        capacityLimitation == "true" && parseInt(maxCapacity) > 0
+          ? "limited"
+          : "unlimited",
+      paymentType:
+        paidTicket == "true" && parseFloat(price) > 0 ? "paid" : "free",
+      price:
+        paidTicket == "true" && parseFloat(price) > 0 ? parseFloat(price) : 0,
       vatPercentage,
       vat,
       priceWithVAT,
