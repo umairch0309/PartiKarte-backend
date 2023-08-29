@@ -20,6 +20,7 @@ function generateUniqueTransactionId() {
   const random = Math.floor(Math.random() * 1000000); // Generate a random number between 0 and 999999
   return `${timestamp}-${random}`;
 }
+
 export const createFreeOrder = async (req, res, next) => {
   const {
     eventId,
@@ -372,6 +373,7 @@ export const getLatestOrders = async (req, res, next) => {
 
 export const getOrdersByTimeInterval = async (req, res) => {
   const { interval } = req.params;
+  const { eventId } = req.query;
   const currentDate = new Date();
 
   let startDate;
@@ -383,8 +385,11 @@ export const getOrdersByTimeInterval = async (req, res) => {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 30); // 30 days ago from today
 
+      console.log(eventId, "eventId");
+
       const foundOrders = await Order.find({
         paymentStatus: true,
+        ...(eventId && { eventId }),
         updatedAt: { $gte: startDate },
         updatedAt: { $lte: endDate },
       }).select("updatedAt orderAmount");
@@ -394,14 +399,14 @@ export const getOrdersByTimeInterval = async (req, res) => {
       // Initialize the aggregatedOrders object with 0 for each day within the date range
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
-        const dayKey = currentDate.toISOString().substr(0, 10);
+        const dayKey = currentDate.toISOString().substring(0, 10);
         aggregatedOrders[dayKey] = 0;
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
       // Update aggregated order amounts based on the fetched orders
       foundOrders.forEach((order) => {
-        const dayKey = order.updatedAt.toISOString().substr(0, 10);
+        const dayKey = order.updatedAt.toISOString().substring(0, 10);
         aggregatedOrders[dayKey] += order.orderAmount;
       });
 
@@ -412,45 +417,122 @@ export const getOrdersByTimeInterval = async (req, res) => {
         })
       );
     } else if (interval === "yearly") {
-      await Order.aggregate([
-        {
-          $match: {
-            paymentStatus: true,
-            updatedAt: {
-              $gte: new Date(
-                currentDate.getFullYear(),
-                currentDate.getMonth(),
-                1
-              ),
-            },
-          },
-        },
-        {
-          $group: {
-            _id: { month: { $month: "$updatedAt" } },
-            revenue: { $sum: "$orderAmount" },
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            month: { $month: "$updatedAt" },
-            revenue: 1,
-          },
-        },
-        { $sort: { month: 1 } },
-      ]);
-    } else if (interval === "weekly") {
-      startDate = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-      orders = await Order.find({
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+
+      const endDate = new Date(); // Today's date
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 11); // 12 months ago from today
+
+      const foundOrders = await Order.find({
         paymentStatus: true,
-        updatedAt: { $gte: startDate },
+        ...(eventId && { eventId }),
+        updatedAt: { $gte: startDate, $lte: endDate },
       }).select("updatedAt orderAmount");
+
+      const aggregatedOrders = {}; // Object to store aggregated order amounts by month
+
+      // Loop through the last 12 months and initialize aggregated order amounts
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const monthYear = currentDate.toISOString().substring(0, 7); // Format: YYYY-MM
+        if (!aggregatedOrders[monthYear]) {
+          aggregatedOrders[monthYear] = 0;
+        }
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+
+      // Loop through each order and update aggregated order amounts by month
+      foundOrders.forEach((order) => {
+        const monthYear = order.updatedAt.toISOString().substring(0, 7); // Format: YYYY-MM
+        if (!aggregatedOrders[monthYear]) {
+          aggregatedOrders[monthYear] = 0;
+        }
+        aggregatedOrders[monthYear] += order.orderAmount;
+      });
+
+      orders = Object.entries(aggregatedOrders).map(
+        ([monthYear, orderAmount]) => {
+          const [year, month] = monthYear.split("-");
+          const monthName = monthNames[parseInt(month, 10) - 1]; // Month is 0-indexed
+
+          return {
+            updatedAt: `${monthName} ${year}`,
+            orderAmount,
+          };
+        }
+      );
+    } else if (interval === "weekly") {
+      const endDate = new Date(); // Today's date
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7); // 7 days ago from today
+
+      // You can replace 'yourEventId' with the actual event ID you want to filter by
+
+      const foundOrders = await Order.find({
+        paymentStatus: true,
+        ...(eventId && { eventId }),
+        updatedAt: { $gte: startDate, $lte: endDate },
+      }).select("updatedAt orderAmount");
+
+      const aggregatedOrders = {}; // Object to store aggregated order amounts by day
+
+      // Initialize the aggregatedOrders object with 0 for each day within the date range
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const dayKey = currentDate.toISOString().substring(0, 10);
+        aggregatedOrders[dayKey] = 0;
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Update aggregated order amounts based on the fetched orders
+      foundOrders.forEach((order) => {
+        const dayKey = order.updatedAt.toISOString().substring(0, 10);
+        aggregatedOrders[dayKey] += order.orderAmount;
+      });
+
+      orders = Object.entries(aggregatedOrders).map(
+        ([updatedAt, orderAmount]) => ({
+          updatedAt,
+          orderAmount,
+        })
+      );
     } else {
       return res.status(400).json({ message: "Invalid interval" });
     }
-
     res.status(200).json({ message: "Orders by interval", orders });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getAllOrdersByEvent = async (req, res, next) => {
+  const { eventId } = req.params;
+  try {
+    const latestOrders = await Order.find({
+      eventId,
+      paymentStatus: true,
+    })
+      .sort({ _id: -1 })
+      .populate("eventId")
+      .exec();
+
+    res
+      .status(200)
+      .json({ message: "Order by event id", orders: latestOrders });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });

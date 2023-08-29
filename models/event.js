@@ -32,7 +32,6 @@ const ticketSchema = new mongoose.Schema({
   },
   ticketType: {
     type: String,
-    required: true,
     trim: true,
   },
   validFrom: {
@@ -143,6 +142,10 @@ const eventSchema = new mongoose.Schema({
     default: 0,
   },
   revenue: {
+    type: Number,
+    default: 0,
+  },
+  totalPaidOut: {
     type: Number,
     default: 0,
   },

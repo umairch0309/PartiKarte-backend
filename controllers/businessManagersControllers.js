@@ -22,7 +22,10 @@ export const getAllBusinessManagers = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    const businessManagers = await User.find();
+    const businessManagers = await User.find({
+      businessId: business?._id,
+      dob: { $exists: true, $ne: null },
+    });
     if (!businessManagers) {
       return next(new HttpError("Managers not found", 404));
     }
