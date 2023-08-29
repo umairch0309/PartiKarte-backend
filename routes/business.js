@@ -18,6 +18,7 @@ import {
   deleteImageFromGallery,
   setImageAsPreview,
   updateGallery,
+  getAllBusinessesForCustomer,
 } from "../controllers/businessControllers.js";
 import {
   addBusinessManager,
@@ -78,5 +79,7 @@ router.patch(
 
 router.get("/organizer-details", verifyToken, getOrganizerDetails);
 router.patch("/organizer-details/update", verifyToken, updateOrganizerDetails);
+
+router.get("/businesses-for-customer", getAllBusinessesForCustomer);
 
 export { router as business };

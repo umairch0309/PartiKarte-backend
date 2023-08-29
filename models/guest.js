@@ -41,6 +41,11 @@ const guestSchema = new mongoose.Schema({
     ref: "Event",
     required: true,
   },
+  businessId: {
+    type: mongoose.Types.ObjectId,
+    ref: "Business",
+    required: true,
+  },
 });
 
 guestSchema.plugin(timestamps);

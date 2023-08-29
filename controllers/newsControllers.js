@@ -19,7 +19,7 @@ export const getAllNews = async (req, res, next) => {
       return next(new HttpError("Invalid Id", 404));
     }
 
-    const existingNews = await News.find();
+    const existingNews = await News.find({ businessId: business?._id });
     if (!existingNews) {
       return next(new HttpError("Couldn't find news", 404));
     }

@@ -68,6 +68,11 @@ const orderSchema = new mongoose.Schema({
     ref: "Event",
     required: true,
   },
+  businessId: {
+    type: mongoose.Types.ObjectId,
+    ref: "Business",
+    required: true,
+  },
 });
 
 orderSchema.plugin(timestamps);

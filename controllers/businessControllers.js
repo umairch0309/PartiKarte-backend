@@ -696,3 +696,16 @@ export const deleteSocialLink = async (req, res, next) => {
     return next(ServerError(error));
   }
 };
+
+export const getAllBusinessesForCustomer = async (req, res, next) => {
+  try {
+    const allBusinesses = await Business.find();
+
+    res.status(200).json({
+      message: "Social link deleted successfully.",
+      businesses: allBusinesses,
+    });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};

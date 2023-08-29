@@ -14,6 +14,7 @@ import {
   apiUsername,
   sharedSecret,
 } from "../constants.js";
+import { findBusinessAndUser } from "../DAL/common.js";
 
 function generateUniqueTransactionId() {
   const timestamp = Date.now();
@@ -55,6 +56,7 @@ export const createFreeOrder = async (req, res, next) => {
       customerEmail,
       customerName,
       paymentStatus: true,
+      businessId: eventRef?.businessId,
     });
 
     actualTickets?.forEach((t) => {
@@ -134,6 +136,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
         postalCode,
         addressDescription,
       },
+      businessId: eventRef?.businessId,
     });
 
     actualTickets?.forEach((t) => {
@@ -275,6 +278,7 @@ export const createCardPaymentOrder = async (req, res, next) => {
         postalCode,
         addressDescription,
       },
+      businessId: eventRef.businessId,
     });
 
     actualTickets?.forEach((t) => {
@@ -351,6 +355,13 @@ export const apiPaymentCallback = async (req, res, next) => {
 
 export const getLatestOrders = async (req, res, next) => {
   try {
+    const { userId } = req;
+
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
     const daysAgo = 10;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysAgo);
@@ -359,6 +370,7 @@ export const getLatestOrders = async (req, res, next) => {
     const latestOrders = await Order.find({
       createdAt: { $gte: startDate },
       paymentStatus: true,
+      businessId: business?._id,
     })
       .sort({ createdAt: -1 })
       .populate("eventId")
@@ -380,6 +392,13 @@ export const getOrdersByTimeInterval = async (req, res) => {
   let orders = [];
 
   try {
+    const { userId } = req;
+
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
     if (interval === "monthly") {
       const endDate = new Date(); // Today's date
       const startDate = new Date();
@@ -389,6 +408,7 @@ export const getOrdersByTimeInterval = async (req, res) => {
 
       const foundOrders = await Order.find({
         paymentStatus: true,
+        businessId: business?._id,
         ...(eventId && { eventId }),
         updatedAt: { $gte: startDate },
         updatedAt: { $lte: endDate },
@@ -437,6 +457,7 @@ export const getOrdersByTimeInterval = async (req, res) => {
       startDate.setMonth(startDate.getMonth() - 11); // 12 months ago from today
 
       const foundOrders = await Order.find({
+        businessId: business?._id,
         paymentStatus: true,
         ...(eventId && { eventId }),
         updatedAt: { $gte: startDate, $lte: endDate },
@@ -482,6 +503,7 @@ export const getOrdersByTimeInterval = async (req, res) => {
       // You can replace 'yourEventId' with the actual event ID you want to filter by
 
       const foundOrders = await Order.find({
+        businessId: business?._id,
         paymentStatus: true,
         ...(eventId && { eventId }),
         updatedAt: { $gte: startDate, $lte: endDate },

@@ -1,3 +1,4 @@
+import { findBusinessAndUser } from "../DAL/common.js";
 import Guest from "../models/guest.js";
 
 // Create a new guest
@@ -5,7 +6,12 @@ export const createGuest = async (req, res) => {
   const { userId } = req;
 
   try {
-    const newGuest = new Guest({ ...req.body, addedBy: userId });
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const newGuest = new Guest({ ...req.body, businessId: business?._id });
     await newGuest.save();
     return res.status(201).json({ message: "Guest added successfully" });
   } catch (error) {
@@ -15,10 +21,17 @@ export const createGuest = async (req, res) => {
 
 // Get all guests
 export const getAllGuests = async (req, res) => {
+  const { userId } = req;
+
+  const { user, business } = await findBusinessAndUser({ _id: userId });
+  if (!user || !business) {
+    return next(new HttpError("Invalid id", 400));
+  }
+
   const { eventId } = req.params;
   try {
     if (eventId && eventId !== "undefined") {
-      const guests = await Guest.find({ eventId })
+      const guests = await Guest.find({ eventId, businessId: business?._id })
         .populate("addedBy")
         .sort({ _id: -1 });
       return res.status(200).json({ guests });
@@ -33,7 +46,14 @@ export const getAllGuests = async (req, res) => {
 export const getGuestById = async (req, res) => {
   const { id } = req.params;
   try {
-    const guest = await Guest.findById(id);
+    const { userId } = req;
+
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const guest = await Guest.find({ _id: id, businessId: business?._id });
     if (!guest) {
       return res.status(404).json({ error: "Guest not found." });
     }
@@ -47,6 +67,13 @@ export const getGuestById = async (req, res) => {
 export const updateGuest = async (req, res) => {
   const { id } = req.params;
   try {
+    const { userId } = req;
+
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
     const updatedGuest = await Guest.findByIdAndUpdate(id, req.body, {
       new: true,
     });
@@ -65,6 +92,13 @@ export const updateGuest = async (req, res) => {
 export const deleteGuest = async (req, res) => {
   const { id } = req.params;
   try {
+    const { userId } = req;
+
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
     const deletedGuest = await Guest.findByIdAndRemove(id);
     if (!deletedGuest) {
       return res.status(404).json({ error: "Guest not found." });

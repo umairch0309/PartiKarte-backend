@@ -14,7 +14,7 @@ export const getAllEvents = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    const events = await Event.find({ businessId: business._id }).sort({
+    const events = await Event.find({ businessId: business?._id }).sort({
       _id: -1,
     });
 
@@ -36,6 +36,7 @@ export const getActiveEvents = async (req, res, next) => {
     const currentDate = new Date();
 
     const events = await Event.find({
+      businessId: business?._id,
       eventStart: { $lte: currentDate }, // Check if eventStart is less than or equal to currentDate
       eventEnd: { $gte: currentDate }, // Check if eventEnd is greater than or equal to currentDate
     });
