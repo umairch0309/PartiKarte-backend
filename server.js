@@ -31,11 +31,14 @@ app.use(cors());
 
 app.use("/api/", router);
 
+const buildPath = path.join(__dirname, "build");
+
+app.use(express.static(buildPath));
+
 app.use("/", express.static(path.join(__dirname, "build")));
 
-app.get("/*", function (req, res) {
-  console.log(" serving file");
-  res.sendFile(path.join(__dirname, "build/index.html"), function (err) {
+app.get("*", (req, res) => {
+  res.sendFile(path.join(buildPath, "index.html"), function (err) {
     if (err) {
       res.status(500).send(err);
       console.log("Error serving file");
