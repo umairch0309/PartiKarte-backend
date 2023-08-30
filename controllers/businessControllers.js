@@ -5,6 +5,7 @@ import { findBusinessAndUser } from "../DAL/common.js";
 import Business from "../models/business.js";
 import User from "../models/user.js";
 import Event from "../models/event.js";
+import News from "../models/news.js";
 
 /**
  * @method  updateBusinessInformation
@@ -700,10 +701,38 @@ export const deleteSocialLink = async (req, res, next) => {
 export const getAllBusinessesForCustomer = async (req, res, next) => {
   try {
     const allBusinesses = await Business.find();
-
     res.status(200).json({
       message: "Social link deleted successfully.",
       businesses: allBusinesses,
+    });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
+export const getSingleBusinessesForCustomer = async (req, res, next) => {
+  const { businessId } = req.params;
+  try {
+    const business = await Business.findById(businessId);
+
+    if (!business) {
+      return next(new HttpError("Not found", 404));
+    }
+
+    const events = await Event.find({
+      businessId: business?._id,
+      tickets: { $exists: true, $not: { $size: 0 } },
+    })
+      .sort({ _id: -1 })
+      .limit(4);
+
+    const news = await News.find({ businessId: business?._id })
+      .sort({ _id: -1 })
+      .limit(4);
+
+    res.status(200).json({
+      message: "Social link deleted successfully.",
+      data: { business, events, news },
     });
   } catch (error) {
     return next(ServerError(error));

@@ -1,33 +1,32 @@
-import nodemailer from "nodemailer";
-import HttpError from "./HttpError.js";
+import ejs from "ejs";
+import sgMail from "@sendgrid/mail";
+sgMail.setApiKey(process.env.EMAIL_API_KEY);
 
-const sendEmail = async (email, emailContent, next) => {
-  // Create a nodemailer transporter with your email service provider settings
+const sendEmail = async (receiver, subject, config, template) => {
+  const emailTemplate = await ejs.renderFile(
+    __dirname + `/email_templates/${template}.ejs`,
+    { ...config }
+  );
 
-  const transporter = nodemailer.createTransport({
-    host: "mcp-5.controlpanel.si",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  });
+  const data = {
+    to: receiver,
+    from: process.env.EMAIL_FROM,
+    subject: subject,
+    html: emailTemplate,
+  };
 
-  try {
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: emailContent.subject,
-      text: emailContent.text,
-    };
+  const result = await sgMail
+    .send(data)
+    .then((res) => {
+      console.log("Email Sent");
+      return res;
+    })
+    .catch((err) => {
+      console.log("Couldn't send email", err);
+      return err;
+    });
 
-    await transporter.sendMail(mailOptions);
-    return true; // Email sent successfully
-  } catch (error) {
-    console.error(error);
-    return next(new HttpError("Couldn't sent email", 500));
-  }
+  return result;
 };
 
-export default sendEmail;
+const SEND_SIGNUP_EMAIL = async (data) => {};

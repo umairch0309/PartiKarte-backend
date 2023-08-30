@@ -11,7 +11,6 @@ import { generateUrlSlug } from "../helpers/helpers.js";
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { createValidationError } from "../helpers/HttpError.js";
 import { findBusinessAndUser } from "../DAL/common.js";
-import sendEmail from "../helpers/sendEmail.js";
 
 /**
  * @method  register
@@ -237,8 +236,6 @@ export const requestResetPassword = async (req, res, next) => {
       text: `To reset your password, click the following link or paste it into your browser (expires in 1 hour):\n
         http://127.0.0.1:4000/users/reset-password/${token}\n`,
     };
-
-    const sendResetPasswordEmail = await sendEmail(email, emailContent, next);
 
     if (sendResetPasswordEmail) {
       res.status(200).json({ message: "Reset password link sent to email" });
