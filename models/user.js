@@ -74,7 +74,11 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
-    isVerified: {
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verifyEmailRequested: {
       type: Boolean,
       default: false,
     },
@@ -86,8 +90,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
+    otp: { type: String },
+    otpExpiry: { type: Date },
   },
   { collection: "users" }
 );

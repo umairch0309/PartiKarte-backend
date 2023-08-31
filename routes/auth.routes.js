@@ -5,9 +5,10 @@ import {
   register,
   authenticate,
   updatePassword,
-  requestResetPassword,
-  resetPassword,
   profileDetails,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
 } from "../controllers/authControllers.js";
 
 const router = express.Router();
@@ -17,9 +18,9 @@ router.post("/login", authenticate);
 
 router.put("/change-password", verifyToken, updatePassword);
 
-// // reset password to be placed here
-router.post("/reset-password", requestResetPassword);
-router.post("/reset-password/:token", resetPassword);
+router.post("/forgot-password", forgotPassword);
+router.post("/verify-otp", verifyOtp);
+router.post("/reset-password", resetPassword);
 
 router.get("/get-profile", verifyToken, profileDetails);
 

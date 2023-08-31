@@ -6,11 +6,12 @@ import Business from "../models/business.js";
 import User from "../models/user.js";
 
 import { userSchema } from "../helpers/validation.js";
-import { generateUrlSlug } from "../helpers/helpers.js";
+import { generateOTP, generateUrlSlug } from "../helpers/helpers.js";
 
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { createValidationError } from "../helpers/HttpError.js";
 import { findBusinessAndUser } from "../DAL/common.js";
+import { SendOtpEmail, SendVerifyOtpEmail } from "../helpers/sendEmail.js";
 
 /**
  * @method  register
@@ -90,14 +91,30 @@ export const register = async (req, res, next) => {
     });
 
     user.businessId = newBusiness._id;
+
+    const { otp, expiry } = generateOTP();
+
+    user.otp = otp;
+    user.otpExpiry = expiry;
+    user.verifyEmailRequested = true;
+
+    const result = await SendVerifyOtpEmail({
+      email: user?.email,
+      otp,
+    });
+
     // Save the new user
     await user.save();
     // Save the new business
     await newBusiness.save();
 
-    res
-      .status(201)
-      .json({ message: "User created successfully", _id: user._id });
+    res.status(201).json({
+      message: "User registered successfully. Please check your email for otp.",
+      _id: user._id,
+      data: {
+        verifyEmailRequested: true,
+      },
+    });
   } catch (error) {
     console.log(error);
     // If an error occurred, rollback the changes by deleting the created business
@@ -144,6 +161,32 @@ export const authenticate = async (req, res, next) => {
 
     if (!isValidPassword) {
       return next(new HttpError("Invalid email or password", 401));
+    }
+    if (!user?.isEmailVerified) {
+      const { otp, expiry } = generateOTP();
+
+      const updatedUser = await User.findByIdAndUpdate(
+        user?._id,
+        { otp, otpExpiry: expiry, verifyEmailRequested: true },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "Something went wrong" });
+      }
+
+      const result = await SendVerifyOtpEmail({
+        email: updatedUser?.email,
+        otp,
+      });
+
+      return res.status(400).send({
+        message:
+          "Account not verified!. Please check your email and verify your account.",
+        data: {
+          verifyEmailRequested: true,
+        },
+      });
     }
 
     const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
@@ -211,74 +254,143 @@ export const updatePassword = async (req, res, next) => {
 };
 
 /**
- * @method  requestResetPassword
+ * @method  forgotPassword
  * @param {*} req
  * @param {*} res
- * @returns  reset password link is sent to email of the user including token to reset
+ * @returns Changes password
+ * need to be merged 1
  */
-
-export const requestResetPassword = async (req, res, next) => {
+export const forgotPassword = async (req, res, next) => {
   const { email } = req.body;
+
   try {
-    const token = crypto.randomBytes(20).toString("hex");
-    const user = await User.findOneAndUpdate(
-      { email },
-      { resetPasswordToken: token, resetPasswordExpires: Date.now() + 3600000 },
+    if (!email) {
+      return next(new HttpError("Please provide email.", 400));
+    }
+
+    const { user, business } = await findBusinessAndUser({ email });
+    if (!user || !business) {
+      return next(new HttpError("Invalid user id", 404));
+    }
+
+    const { otp, expiry } = generateOTP();
+
+    const updatedUser = await User.findByIdAndUpdate(
+      user?._id,
+      { otp, otpExpiry: expiry },
       { new: true }
     );
 
-    if (!user) {
-      return next(new HttpError("User not found", 404));
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Something went wrong" });
     }
 
-    const emailContent = {
-      subject: "Reset Password Request",
-      text: `To reset your password, click the following link or paste it into your browser (expires in 1 hour):\n
-        http://127.0.0.1:4000/users/reset-password/${token}\n`,
-    };
+    const result = await SendOtpEmail({
+      email: updatedUser?.email,
+      otp,
+    });
 
-    if (sendResetPasswordEmail) {
-      res.status(200).json({ message: "Reset password link sent to email" });
+    console.log("emai response");
+    if (!result) {
+      res.status(500).json({ error: error.message });
     }
+
+    res.status(200).json({
+      message: "Reset pasword otp generated and sent to your email address.",
+    });
   } catch (error) {
-    console.error(error);
-    return next(new HttpError("Server error", 500));
+    res.status(500).json({ error: error.message });
   }
 };
 
-/**
- * @method  resetPassword
- * @param {*} req
- * @param {*} res
- * @returns password is reset on the basis of token and password received
- */
-
-export const resetPassword = async (req, res, next) => {
-  const { password } = req.body;
-  const { token } = req.params;
+export const verifyOtp = async (req, res, next) => {
+  const { email, otp } = req.body;
 
   try {
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
+    if (!email) {
+      return next(new HttpError("Please provide email.", 400));
+    }
 
-    if (!user) {
-      return next(new HttpError("Invalid or expired token", 400));
+    const { user, business } = await findBusinessAndUser({ email });
+    if (!user || !business) {
+      return next(new HttpError("Invalid user id", 404));
+    }
+
+    if (new Date().getTime() > new Date(user?.otpExpiry)?.getTime()) {
+      return next(
+        new HttpError("Otp is expired. Please generate a new one.", 400)
+      );
+    }
+
+    if (otp !== user?.otp) {
+      return next(new HttpError("Otp doesn't match.", 400));
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      user?._id,
+      {
+        otp: "",
+        otpExpiry: "",
+        ...(!user?.isEmailVerified &&
+          user?.verifyEmailRequested && {
+            isEmailVerified: true,
+            verifyEmailRequested: false,
+          }),
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Something went wrong" });
+    }
+
+    res.status(200).json({
+      message: "Otp verified successfully.",
+      data: {
+        ...(user?.verifyEmailRequested && { verifyEmailRequested: true }),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  const { password, confirmPassword, email } = req.body;
+
+  try {
+    if (confirmPassword !== password) {
+      return next(new HttpError("Passwords doesn't match.", 400));
+    }
+
+    const { user, business } = await findBusinessAndUser({ email });
+    if (!user || !business) {
+      return next(new HttpError("Invalid user id", 404));
+    }
+    const isPasswordSame = await bcrypt.compare(password, user?.password);
+
+    if (isPasswordSame) {
+      return next(
+        new HttpError("Old password and new password cannot be same.", 400)
+      );
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    user.password = hashedPassword;
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-    await user.save();
+    const updatedUser = await User.findByIdAndUpdate(
+      user?._id,
+      { password: hashedPassword, salt },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Something went wrong" });
+    }
 
     res.status(200).json({ message: "Password updated" });
   } catch (error) {
-    console.error(error);
-    return next(ServerError(error));
+    res.status(400).json({ error: error.message });
   }
 };
 

@@ -383,7 +383,7 @@ export const getLatestOrders = async (req, res, next) => {
   }
 };
 
-export const getOrdersByTimeInterval = async (req, res) => {
+export const getOrdersByTimeInterval = async (req, res, next) => {
   const { interval } = req.params;
   const { eventId } = req.query;
   const currentDate = new Date();
@@ -521,11 +521,11 @@ export const getOrdersByTimeInterval = async (req, res) => {
 
       // Update aggregated order amounts based on the fetched orders
       foundOrders.forEach((order) => {
-        const dayKey = order.updatedAt.toISOString().substring(0, 10);
-        aggregatedOrders[dayKey] += order.orderAmount;
+        const dayKey = order?.updatedAt.toISOString().substring(0, 10);
+        aggregatedOrders[dayKey] += order?.orderAmount;
       });
 
-      orders = Object.entries(aggregatedOrders).map(
+      orders = Object.entries(aggregatedOrders)?.map(
         ([updatedAt, orderAmount]) => ({
           updatedAt,
           orderAmount,

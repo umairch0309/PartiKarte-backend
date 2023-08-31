@@ -1,32 +1,64 @@
 import ejs from "ejs";
+import path from "path";
+import { fileURLToPath } from "url";
+
 import sgMail from "@sendgrid/mail";
 sgMail.setApiKey(process.env.EMAIL_API_KEY);
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const sendEmail = async (receiver, subject, config, template) => {
-  const emailTemplate = await ejs.renderFile(
-    __dirname + `/email_templates/${template}.ejs`,
-    { ...config }
-  );
+  let result;
+  try {
+    const emailTemplate = await ejs.renderFile(
+      __dirname + `/email_templates/${template}.ejs`,
+      { ...config }
+    );
 
-  const data = {
-    to: receiver,
-    from: process.env.EMAIL_FROM,
-    subject: subject,
-    html: emailTemplate,
-  };
+    const data = {
+      to: receiver,
+      from: process.env.EMAIL_FROM,
+      subject: subject,
+      html: emailTemplate,
+    };
 
-  const result = await sgMail
-    .send(data)
-    .then((res) => {
-      console.log("Email Sent");
-      return res;
-    })
-    .catch((err) => {
-      console.log("Couldn't send email", err);
-      return err;
-    });
+    result = await sgMail.send(data);
+    console.log("email sent");
+  } catch (e) {
+    result = e;
+    console.log("could not send email", e);
+  }
 
   return result;
 };
 
-const SEND_SIGNUP_EMAIL = async (data) => {};
+export const SendOtpEmail = async (data) => {
+  const { email, otp } = data;
+  const subject = "Forgot Password - OTP Verification";
+  const result = sendEmail(
+    email,
+    subject,
+    {
+      otp,
+      subject,
+    },
+    "forgot-password"
+  );
+  return result;
+};
+
+export const SendVerifyOtpEmail = async (data) => {
+  const { email, otp } = data;
+  const subject = "Welcome - Email Verification.";
+  const result = sendEmail(
+    email,
+    subject,
+    {
+      otp,
+      subject,
+    },
+    "verify-email"
+  );
+  return result;
+};
