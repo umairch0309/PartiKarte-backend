@@ -22,6 +22,24 @@ function generateUniqueTransactionId() {
   return `${timestamp}-${random}`;
 }
 
+function monthNameToNumber(monthName) {
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  return months.indexOf(monthName);
+}
+
 export const createFreeOrder = async (req, res, next) => {
   const {
     eventId,
@@ -266,6 +284,7 @@ export const createCardPaymentOrder = async (req, res, next) => {
       eventId: new mongoose.Types.ObjectId(eventId),
       recommendations: recommendations === "true",
       purchaseId: responseBody?.purchaseId,
+      bankUuid: responseBody?.uuid,
       tickets: transformedTickets,
       noOfTickets: parseInt(noOfTickets),
       orderAmount: parseInt(orderAmount),
@@ -356,6 +375,7 @@ export const apiPaymentCallback = async (req, res, next) => {
 export const getLatestOrders = async (req, res, next) => {
   try {
     const { userId } = req;
+    console.log(userId, "ates orders");
 
     const { user, business } = await findBusinessAndUser({ _id: userId });
     if (!user || !business) {
@@ -393,6 +413,7 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
 
   try {
     const { userId } = req;
+    console.log(userId, "ates orders");
 
     const { user, business } = await findBusinessAndUser({ _id: userId });
     if (!user || !business) {
@@ -555,6 +576,47 @@ export const getAllOrdersByEvent = async (req, res, next) => {
     res
       .status(200)
       .json({ message: "Order by event id", orders: latestOrders });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getBusinessRevenueByMonth = async (req, res, next) => {
+  const { month } = req.params;
+
+  const currentYear = new Date().getFullYear();
+
+  try {
+    const { userId } = req;
+
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const data = await Order.aggregate([
+      {
+        $match: {
+          businessId: business?._id,
+          paymentStatus: true,
+          createdAt: {
+            $gte: new Date(currentYear, monthNameToNumber(month), 1),
+            $lt: new Date(currentYear, monthNameToNumber(month) + 1, 1),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$businessId",
+          totalOrders: { $sum: 1 },
+          totalTicketsSold: { $sum: "$noOfTickets" },
+          totalRevenue: { $sum: "$orderAmount" },
+        },
+      },
+    ]).exec();
+
+    res.status(200).json({ message: "revenue data", data });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });

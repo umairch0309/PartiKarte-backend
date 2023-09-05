@@ -142,6 +142,7 @@ export const updateTicket = async (req, res, next) => {
     validTo,
     maxCapacity,
     capacityLimitation,
+    paidTicket,
     price,
     vatPercentage,
     descriptionWeb,
@@ -170,7 +171,6 @@ export const updateTicket = async (req, res, next) => {
     const { vat, priceWithVAT } = calculatePriceWithVAT(price, vatPercentage);
 
     const updatedTicket = {
-      _id: ticketId, // Maintain the same mongoose ObjectId
       ticketName,
       validFrom,
       ticketType,
@@ -194,7 +194,10 @@ export const updateTicket = async (req, res, next) => {
       descriptionTicket,
     };
 
-    event.tickets[ticketIndex] = updatedTicket;
+    event.tickets[ticketIndex] = {
+      ...event.tickets[ticketIndex],
+      ...updatedTicket,
+    };
     await event.save();
 
     res.status(200).json({ message: "Ticket updated", ticket: updatedTicket });

@@ -1,63 +1,74 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import nodemailer from 'nodemailer';
-import multer from 'multer';
-import { validationResult, body } from 'express-validator';
-import cors from 'cors';
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import uploadS3Image from "../utils/uploadS3Image.js";
+import Contact from "../models/contact.js";
+import { SendContactUsEmail } from "../helpers/sendEmail.js";
 
 dotenv.config();
 
 const router = express.Router();
 router.use(cors());
 
-const contactUsValidationRules = () => [
-    body('firstName').notEmpty().withMessage('First Name is required'),
-    body('lastName').notEmpty().withMessage('Last Name is required'),
-    body('email').isEmail().withMessage('Invalid email format'),
-    body('subject').notEmpty().withMessage('Subject is required'),
-    body('message').notEmpty().withMessage('Message is required'),
-];
+router.post(
+  "/contact-us",
 
-const upload = multer({ storage: multer.memoryStorage() });
+  async (req, res, next) => {
+    const { files } = req;
 
-router.post('/contact-us', upload.single('file'), contactUsValidationRules(), async (req, res) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() });
+      const { firstName, lastName, email, object, description, phoneNumber } =
+        req.body;
+
+      const attachments = req.files.map((file) => ({
+        content: file.buffer.toString("base64"),
+        filename: file.originalname,
+        type: file.mimetype,
+        disposition: "attachment",
+      }));
+
+      const uploadedFiles = [];
+
+      for (const file of files) {
+        const uploadedImage = await uploadS3Image(file, "contact_us/", next);
+
+        if (uploadedImage.uploadedImagePath && uploadedImage.status) {
+          uploadedFiles.push(uploadedImage.uploadedImagePath);
         }
+      }
 
-        const { firstName, lastName, email, subject, message, phoneNumber } = req.body;
-        const { file } = req;
+      const contactUs = new Contact({
+        firstName,
+        lastName,
+        email,
+        object,
+        description,
+        phoneNumber,
+        files: uploadedFiles,
+      });
+      await contactUs.save();
 
-        const transporter = nodemailer.createTransport({
-            host: 'mcp-5.controlpanel.si',
-            port: 587,
-            secure: false,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD,
-            },
-        });
+      await SendContactUsEmail({
+        firstName,
+        lastName,
+        email,
+        object,
+        description,
+        phoneNumber,
+        attachments,
+      });
 
-        const mailOptions = {
-            from: email,
-            to: 'info@partikarte.si',
-            subject: subject,
-            text: `First Name: ${firstName}\nLast Name: ${lastName}\nEmail: ${email}\nPhone Number: ${phoneNumber || 'Not provided'}\n\nMessage:\n${message}`,
-            attachments: file ? [{ filename: file.originalname, content: file.buffer }] : [],
-        };
-
-        transporter.sendMail(mailOptions, (error) => {
-            if (error) {
-                console.error(error);
-                return res.status(500).send('Server error');
-            }
-            res.status(200).json({ message: 'Email sent' });
-        });
+      return res.status(200).json({
+        message:
+          "Your concern has been noticed. We'll get back to you ASAP. Thank you!",
+      });
     } catch (error) {
-        res.status(500).json({ message: 'Error sending contact us email', error });
+      console.log(error);
+      return res
+        .status(500)
+        .json({ message: "Error sending contact us email" });
     }
-});
+  }
+);
 
 export { router as contact };

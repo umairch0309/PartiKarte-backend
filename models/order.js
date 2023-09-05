@@ -45,6 +45,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: "not-a-card-payment",
   },
+  bankUuid: {
+    type: String,
+    default: "not-a-card-payment",
+  },
   orderAmount: {
     type: Number,
     required: true,

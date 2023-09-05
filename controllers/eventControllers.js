@@ -165,6 +165,7 @@ export const updateEvent = async (req, res, next) => {
     eventDescription,
     eventLink,
   } = req.body;
+
   const [eventBanner] = req.files;
 
   console.log(req.files);
@@ -175,9 +176,13 @@ export const updateEvent = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    let eventBannerLink = "";
+    let eventBannerLink = null;
 
-    if (eventBanner && eventBanner.mimetype.startsWith("image/")) {
+    if (
+      req.files?.length > 0 &&
+      eventBanner &&
+      eventBanner.mimetype.startsWith("image/")
+    ) {
       const uploadedEventBanner = await uploadS3Image(
         eventBanner,
         "event_banners/",
@@ -186,16 +191,14 @@ export const updateEvent = async (req, res, next) => {
       if (uploadedEventBanner.uploadedImagePath && uploadedEventBanner.status) {
         eventBannerLink = uploadedEventBanner.uploadedImagePath;
       }
-    } else {
-      eventBannerLink = req.body.eventBanner;
     }
 
     const updatedEvent = {
       eventName,
-      eventStart,
-      eventEnd,
+      ...(eventStart && { eventStart }),
+      ...(eventEnd && { eventEnd }),
       eventType,
-      eventBanner: eventBannerLink,
+      ...(eventBannerLink && { eventBanner: eventBannerLink }),
       eventCategory,
       eventAddress: {
         ...(addressDescription && { addressDescription }),
@@ -299,11 +302,11 @@ export const deleteEvent = async (req, res, next) => {
 export const getAllEventsForCustomer = async (req, res, next) => {
   try {
     const eventsWithTickets = await Event.aggregate([
-      {
-        $match: {
-          tickets: { $exists: true, $not: { $size: 0 } },
-        },
-      },
+      // {
+      //   $match: {
+      //     tickets: { $exists: true, $not: { $size: 0 } },
+      //   },
+      // },
       {
         $sort: {
           _id: -1,

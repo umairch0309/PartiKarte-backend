@@ -9,6 +9,7 @@ import {
   getLatestOrders,
   getOrdersByTimeInterval,
   getAllOrdersByEvent,
+  getBusinessRevenueByMonth,
 } from "../controllers/orderControllers.js";
 
 const router = express.Router();
@@ -19,8 +20,13 @@ router.post("/create-card-payment-order", createCardPaymentOrder);
 router.post("/result-api-callback", apiPaymentCallback);
 
 // admin side orders apis
-router.get("/orders/latest-orders", getLatestOrders);
-router.get("/orders/:eventId", getAllOrdersByEvent);
-router.get("/orders/by-time/:interval", getOrdersByTimeInterval);
+router.get("/orders/latest-orders", verifyToken, getLatestOrders);
+router.get("/orders/:eventId", verifyToken, getAllOrdersByEvent);
+router.get("/orders/by-time/:interval", verifyToken, getOrdersByTimeInterval);
+router.get(
+  "/orders/get-business-revenue-by-month/:month",
+  verifyToken,
+  getBusinessRevenueByMonth
+);
 
 export { router as orders };

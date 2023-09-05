@@ -8,7 +8,13 @@ sgMail.setApiKey(process.env.EMAIL_API_KEY);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const sendEmail = async (receiver, subject, config, template) => {
+const sendEmail = async (
+  receiver,
+  subject,
+  config,
+  template,
+  attachments = []
+) => {
   let result;
   try {
     const emailTemplate = await ejs.renderFile(
@@ -21,6 +27,7 @@ const sendEmail = async (receiver, subject, config, template) => {
       from: process.env.EMAIL_FROM,
       subject: subject,
       html: emailTemplate,
+      ...(attachments?.length > 0 && { attachments }),
     };
 
     result = await sgMail.send(data);
@@ -59,6 +66,18 @@ export const SendVerifyOtpEmail = async (data) => {
       subject,
     },
     "verify-email"
+  );
+  return result;
+};
+
+export const SendContactUsEmail = async (data) => {
+  const subject = "Contact Us Email";
+  const result = sendEmail(
+    process.env.EMAIL_FROM,
+    subject,
+    { ...data, subject },
+    "contact-us",
+    data.attachments
   );
   return result;
 };
