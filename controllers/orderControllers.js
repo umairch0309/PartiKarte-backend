@@ -15,6 +15,8 @@ import {
   sharedSecret,
 } from "../constants.js";
 import { findBusinessAndUser } from "../DAL/common.js";
+import generateTickets from "../helpers/generateTickets.js";
+import { SendTicketEmail } from "../helpers/sendEmail.js";
 
 function generateUniqueTransactionId() {
   const timestamp = Date.now();
@@ -103,7 +105,39 @@ export const createFreeOrder = async (req, res, next) => {
       return res.status(500).send("Server error");
     }
 
-    res.status(201).send({ message: "Order has been saved successfully." });
+    for (const ticket of transformedTickets) {
+      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${eventRef?._id}&&ticketId=${ticket?.ticketId}`;
+      const foundTicket = eventRef?.tickets.find(
+        (t) => t._id?.toString() === ticket?.ticketId
+      );
+      ticket.ticketAppearance = {
+        ...foundTicket?.ticketAppearance,
+        eventName: eventRef?.eventName,
+        eventVenue: eventRef?.eventVenue,
+        ticketPrice: foundTicket?.price,
+        ticketVat: foundTicket?.price,
+        descriptionTicket: foundTicket?.descriptionTicket,
+      };
+    }
+    console.log(transformedTickets, "transformed tickets");
+
+    const pdfResult = await generateTickets(transformedTickets);
+
+    console.log(pdfResult, "pdf result");
+
+    SendTicketEmail({
+      email: customerEmail,
+      attachments: pdfResult?.map((el, index) => ({
+        content: el.toString("base64"),
+        filename: `ticket${index}.pdf`,
+        type: "application/pdf",
+        disposition: "attachment",
+      })),
+    });
+
+    res.status(201).send({
+      message: "Order has been saved successfully. Please check your email.",
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).send("Server error");

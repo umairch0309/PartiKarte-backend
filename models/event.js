@@ -91,6 +91,46 @@ const ticketSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  ticketAppearance: {
+    logo: {
+      type: String,
+    },
+    organizerName: {
+      type: String,
+    },
+    organizerAddress: addressSchema,
+    companyName: {
+      type: String,
+    },
+    companyVAT: {
+      type: String,
+    },
+    companyAddress: addressSchema,
+    ticketName: {
+      type: String,
+    },
+    emailContent: {
+      type: String,
+    },
+    eventAddress: addressSchema,
+    entryTimeWithTicket: {
+      type: Date,
+    },
+    eventStart: {
+      type: Date,
+    },
+    eventEnd: {
+      type: Date,
+    },
+    showCompanyInfo: {
+      type: Boolean,
+      default: true,
+    },
+    showOrganizerInfo: {
+      type: Boolean,
+      default: true,
+    },
+  },
 });
 
 const eventSchema = new mongoose.Schema({

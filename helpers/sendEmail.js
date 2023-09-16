@@ -81,3 +81,15 @@ export const SendContactUsEmail = async (data) => {
   );
   return result;
 };
+
+export const SendTicketEmail = async (data) => {
+  const subject = "Ticket Confirmation - Thank You";
+  const result = sendEmail(
+    data?.email,
+    subject,
+    { otp: 23232, subject },
+    "forgot-password",
+    data.attachments
+  );
+  return result;
+};

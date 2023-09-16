@@ -6,6 +6,7 @@ import {
   getAllTickets,
   getTicket,
   updateTicket,
+  updateTicketAppearance,
 } from "../controllers/ticketController.js";
 
 const router = express.Router();
@@ -20,6 +21,12 @@ router.put(
   "/event/:eventId/tickets/update/:ticketId",
   verifyToken,
   updateTicket
+);
+
+router.put(
+  "/event/:eventId/tickets/update-ticket-appearance/:ticketId",
+  verifyToken,
+  updateTicketAppearance
 );
 
 router.delete("/event/:eventId/tickets/:ticketId", verifyToken, deleteTicket);

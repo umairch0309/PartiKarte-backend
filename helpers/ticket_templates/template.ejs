@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0px;
+        max-width: 100%;
+        width: 100%;
+        min-width: 100%;
+        max-height: 1000px;
+        min-height: 1000px;
+        height: 1000px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        /* gap: 50px; */
+      }
+
+      p,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin: 0;
+        padding: 0;
+        font-family: "Outfit", sans-serif;
+      }
+
+      .main-section {
+        padding: 50px 30px 30px 30px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        background-color: rgb(250, 250, 250);
+        height: 100%;
+      }
+      .footer {
+        height: 90px !important;
+        background-color: #3d8aff !important;
+        background: #3d8aff !important;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* main css */
+      .single-section {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 15px;
+        width: 100%;
+      }
+      .heading {
+        color: #3d8aff;
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+      }
+      .label {
+        font-weight: 400;
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #565656;
+        margin-bottom: 5px;
+      }
+      .text {
+        color: #0e2d5d;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 5;
+        overflow: hidden;
+      }
+      .box {
+        min-width: 30%;
+      }
+      .side-by-side {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+      .two-sections-container {
+        width: 100%;
+        display: flex;
+        gap: 30px;
+      }
+      .qr-code-section {
+        width: 50%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .qr-code-image {
+        width: 170px;
+        height: 170px;
+      }
+      .qr-code-section h4 {
+        color: #0e2d5d;
+      }
+      .logo-section {
+        width: 50%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .logo-image {
+        width: 130px;
+        height: 130px;
+        object-fit: cover;
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-section">
+      <!-- EVENT -->
+      <div class="single-section">
+        <div class="box">
+          <p class="label">Event</p>
+          <h2 class="heading"><%= eventName %></h2>
+        </div>
+        <div class="side-by-side">
+          <div class="box">
+            <p class="label">From</p>
+            <h4 class="text"><%= new Date(eventStart)?.toLocaleString() %></h4>
+          </div>
+          <div class="box">
+            <p class="label">To</p>
+            <h4 class="text"><%= new Date(eventEnd)?.toLocaleString() %></h4>
+          </div>
+          <div class="box">
+            <p class="label">Entry time</p>
+            <h4 class="text">
+              <%= new Date(entryTimeWithTicket)?.toLocaleString() %>
+            </h4>
+          </div>
+        </div>
+        <div class="box">
+          <p class="label">venue</p>
+          <h4 class="text"><%= eventVenue %></h4>
+        </div>
+        <div class="side-by-side">
+          <div class="box">
+            <p class="label">city</p>
+            <h4 class="text"><%= eventAddress?.city %></h4>
+          </div>
+          <div class="box">
+            <p class="label">Country</p>
+            <h4 class="text"><%= eventAddress?.country %></h4>
+          </div>
+          <div class="box">
+            <p class="label">Postal code</p>
+            <h4 class="text"><%= eventAddress?.postalCode %></h4>
+          </div>
+        </div>
+        <div class="box">
+          <p class="label">address</p>
+          <h4 class="text"><%= eventAddress?.addressDescription %></h4>
+        </div>
+      </div>
+
+      <!-- TICKET -->
+      <div class="two-sections-container">
+        <div class="single-section">
+          <div class="box">
+            <p class="label">Ticket</p>
+            <h2 class="heading"><%= ticketName %></h2>
+          </div>
+          <div class="side-by-side">
+            <div class="box">
+              <p class="label">price</p>
+              <h4 class="text">$ <%= ticketPrice %></h4>
+            </div>
+            <div class="box">
+              <p class="label">vat</p>
+              <h4 class="text">$ <%= ticketVat %></h4>
+            </div>
+          </div>
+          <div class="box">
+            <p class="label">description</p>
+            <h4 class="text"><%= descriptionTicket %></h4>
+          </div>
+        </div>
+        <div class="qr-code-section">
+          <img src="<%= qrCode %>" class="qr-code-image" alt="qr-code" />
+          <h4>SCAN TO ENTER</h4>
+        </div>
+      </div>
+
+      <!-- Organizer -->
+      <div class="two-sections-container">
+        <div class="single-section">
+          <div class="box">
+            <p class="label">organizer name</p>
+            <h2 class="heading"><%= organizerName %></h2>
+          </div>
+          <div class="side-by-side">
+            <div class="box">
+              <p class="label">vat#</p>
+              <h4 class="text"><%= companyVAT %></h4>
+            </div>
+            <div class="box">
+              <p class="label">Company name</p>
+              <h4 class="text"><%= companyName %></h4>
+            </div>
+          </div>
+        </div>
+        <div class="logo-section">
+          <img src="<%= logo %>" class="logo-image" />
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <img
+        src="https://partibucket.s3.eu-west-3.amazonaws.com/images/partikarte_data/partikarte-for-ticket-pdf.png"
+      />
+    </div>
+  </body>
+</html>
