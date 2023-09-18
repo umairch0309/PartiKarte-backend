@@ -5,8 +5,7 @@ export const apiPassword = "jLZzdv.q?Q94la0Hi)FLsYCVPLl0R";
 export const sharedSecret = "rrNurxOrwsjyehtIp401utmS0Obvau";
 
 // payment urls
-export const callbackUrl =
-  "https://63ea-2400-adc5-141-cd00-d0c2-198-3141-a33a.ngrok.io/api/result-api-callback";
+export const callbackUrl = "http://13.38.94.55/api/result-api-callback";
 export const successUrl = "http://13.38.94.55/checkout/payment-success";
 export const errorUrl = "http://13.38.94.55/checkout/payment-error";
 export const cancelUrl = "http://13.38.94.55/checkout/payment-error";
