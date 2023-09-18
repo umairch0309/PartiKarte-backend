@@ -87,8 +87,8 @@ export const SendTicketEmail = async (data) => {
   const result = sendEmail(
     data?.email,
     subject,
-    { otp: 23232, subject },
-    "forgot-password",
+    { ...data, subject },
+    "booking-confirmation",
     data.attachments
   );
   return result;

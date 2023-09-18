@@ -150,11 +150,15 @@
         <div class="side-by-side">
           <div class="box">
             <p class="label">From</p>
-            <h4 class="text"><%= new Date(eventStart)?.toLocaleString() %></h4>
+            <h4 class="text">
+              <%= eventStart? new Date(eventStart)?.toLocaleString(): ' ' %>
+            </h4>
           </div>
           <div class="box">
             <p class="label">To</p>
-            <h4 class="text"><%= new Date(eventEnd)?.toLocaleString() %></h4>
+            <h4 class="text">
+              <%= eventEnd? new Date(eventEnd)?.toLocaleString(): '' %>
+            </h4>
           </div>
           <div class="box">
             <p class="label">Entry time</p>

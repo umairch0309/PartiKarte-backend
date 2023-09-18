@@ -115,7 +115,7 @@ export const createFreeOrder = async (req, res, next) => {
         eventName: eventRef?.eventName,
         eventVenue: eventRef?.eventVenue,
         ticketPrice: foundTicket?.price,
-        ticketVat: foundTicket?.price,
+        ticketVat: foundTicket?.vat,
         descriptionTicket: foundTicket?.descriptionTicket,
       };
     }
@@ -127,6 +127,8 @@ export const createFreeOrder = async (req, res, next) => {
 
     SendTicketEmail({
       email: customerEmail,
+      customerName,
+      eventName: eventRef?.eventName,
       attachments: pdfResult?.map((el, index) => ({
         content: el.toString("base64"),
         filename: `ticket${index}.pdf`,
@@ -227,7 +229,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
         eventName: eventRef?.eventName,
         eventVenue: eventRef?.eventVenue,
         ticketPrice: foundTicket?.price,
-        ticketVat: foundTicket?.price,
+        ticketVat: foundTicket?.vat,
         descriptionTicket: foundTicket?.descriptionTicket,
       };
     }
@@ -239,6 +241,8 @@ export const createBankPaymentOrder = async (req, res, next) => {
 
     SendTicketEmail({
       email: customerEmail,
+      customerName,
+      eventName: eventRef?.eventName,
       attachments: pdfResult?.map((el, index) => ({
         content: el.toString("base64"),
         filename: `ticket${index}.pdf`,
@@ -404,36 +408,6 @@ export const createCardPaymentOrder = async (req, res, next) => {
       });
     }
 
-    for (const ticket of transformedTickets) {
-      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${eventRef?._id}&&ticketId=${ticket?.ticketId}`;
-      const foundTicket = eventRef?.tickets.find(
-        (t) => t._id?.toString() === ticket?.ticketId
-      );
-      ticket.ticketAppearance = {
-        ...foundTicket?.ticketAppearance,
-        eventName: eventRef?.eventName,
-        eventVenue: eventRef?.eventVenue,
-        ticketPrice: foundTicket?.price,
-        ticketVat: foundTicket?.price,
-        descriptionTicket: foundTicket?.descriptionTicket,
-      };
-    }
-    console.log(transformedTickets, "transformed tickets");
-
-    const pdfResult = await generateTickets(transformedTickets);
-
-    console.log(pdfResult, "pdf result");
-
-    SendTicketEmail({
-      email: customerEmail,
-      attachments: pdfResult?.map((el, index) => ({
-        content: el.toString("base64"),
-        filename: `ticket${index}.pdf`,
-        type: "application/pdf",
-        disposition: "attachment",
-      })),
-    });
-
     return res
       .status(201)
       .send({ message: "Order has been saved successfully." });
@@ -445,6 +419,8 @@ export const createCardPaymentOrder = async (req, res, next) => {
 
 export const apiPaymentCallback = async (req, res, next) => {
   const { purchaseId, result } = req.body;
+
+  console.log(result, "payment result");
   try {
     if (result === "OK") {
       const order = await Order.findOneAndUpdate(
@@ -452,6 +428,58 @@ export const apiPaymentCallback = async (req, res, next) => {
         { paymentStatus: true },
         { new: true }
       );
+
+      const event = await Event.findById(order?.eventId);
+
+      if (!event) {
+        console.log(" couldn't find event");
+        return;
+      }
+
+      const transformedTickets = [];
+
+      const tickets = order.tickets;
+
+      for (const ticket of tickets) {
+        const qrCodeData = `orderId=${order?._id}&&eventId=${event?._id}&&ticketId=${ticket?.ticketId}`;
+        const foundTicket = event?.tickets.find(
+          (t) => t._id?.toString() === ticket?.ticketId?.toString()
+        );
+
+        console.log(foundTicket, "found ticket", ticket, "ticket");
+
+        transformedTickets.push({
+          ticketId: ticket.ticketId,
+          noOfTickets: ticket.noOfTickets,
+          qrCodeData,
+          ticketAppearance: {
+            ...foundTicket?.ticketAppearance,
+            eventName: event?.eventName,
+            eventVenue: event?.eventVenue,
+            ticketPrice: foundTicket?.price,
+            ticketVat: foundTicket?.vat,
+            descriptionTicket: foundTicket?.descriptionTicket,
+          },
+        });
+      }
+
+      console.log(transformedTickets, "transformed tickets");
+
+      const pdfResult = await generateTickets(transformedTickets);
+
+      console.log(pdfResult, "pdf result");
+
+      await SendTicketEmail({
+        customerName: order?.customerName,
+        eventName: event?.eventName,
+        email: order?.customerEmail,
+        attachments: pdfResult?.map((el, index) => ({
+          content: el.toString("base64"),
+          filename: `ticket${index}.pdf`,
+          type: "application/pdf",
+          disposition: "attachment",
+        })),
+      });
     } else {
       const order = Order.findOne({ purchaseId });
       if (order) {
@@ -461,9 +489,9 @@ export const apiPaymentCallback = async (req, res, next) => {
         await event.save();
       }
     }
-    return res.status(200).send("OK");
+    return res.status(200).send();
   } catch (error) {
-    console.error(error);
+    return next(ServerError(error));
   }
 };
 
