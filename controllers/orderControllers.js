@@ -505,7 +505,7 @@ export const getLatestOrders = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    const daysAgo = 10;
+    const daysAgo = 7;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysAgo);
     console.log(startDate);
