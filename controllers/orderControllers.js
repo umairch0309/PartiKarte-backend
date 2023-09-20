@@ -17,6 +17,8 @@ import {
 import { findBusinessAndUser } from "../DAL/common.js";
 import generateTickets from "../helpers/generateTickets.js";
 import { SendTicketEmail } from "../helpers/sendEmail.js";
+import generateInvoice from "../helpers/generateInvoice.js";
+import Business from "../models/business.js";
 
 function generateUniqueTransactionId() {
   const timestamp = Date.now();
@@ -122,20 +124,38 @@ export const createFreeOrder = async (req, res, next) => {
     }
     console.log(transformedTickets, "transformed tickets");
 
-    const pdfResult = await generateTickets(transformedTickets);
+    const business = await Business.findById(eventRef?.businessId);
 
+    const pdfResult = await generateTickets(transformedTickets);
     console.log(pdfResult, "pdf result");
+
+    const invoiceResult = await generateInvoice({
+      order: neworder,
+      business,
+      tickets: transformedTickets,
+      type: "Free Order - Online",
+    });
+
+    console.log(invoiceResult, "invoice result");
 
     SendTicketEmail({
       email: customerEmail,
       customerName,
       eventName: eventRef?.eventName,
-      attachments: pdfResult?.map((el, index) => ({
-        content: el.toString("base64"),
-        filename: `ticket${index}.pdf`,
-        type: "application/pdf",
-        disposition: "attachment",
-      })),
+      attachments: [
+        ...pdfResult?.map((el, index) => ({
+          content: el.toString("base64"),
+          filename: `ticket${index}.pdf`,
+          type: "application/pdf",
+          disposition: "attachment",
+        })),
+        ...invoiceResult?.map((el, index) => ({
+          content: el?.toString("base64"),
+          filename: `ticket${index}.pdf`,
+          type: "application/pdf",
+          disposition: "attachment",
+        })),
+      ],
     });
 
     res.status(201).send({

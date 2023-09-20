@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: "Outfit", sans-serif;
+      }
+      body {
+        margin: 0px;
+        max-width: 595px;
+        width: 595px;
+        min-width: 595px;
+        max-height: 842px;
+        min-height: 842px;
+        height: 842px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        font-family: "Outfit", sans-serif;
+      }
+
+      .footer {
+        height: 50px;
+        background-color: #3d8aff;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .container {
+        max-width: 680px;
+        margin: 0 auto;
+      }
+      .logotype {
+        background: #000;
+        color: #fff;
+        width: 75px;
+        height: 75px;
+        line-height: 75px;
+        text-align: center;
+        font-size: 11px;
+      }
+      .column-title {
+        background: #3d8bffe8;
+        text-transform: uppercase;
+        padding: 15px 5px 15px 15px;
+        font-size: 11px;
+      }
+      .column-detail {
+        border-top: 1px solid #3d8bffe8;
+        border-bottom: 1px solid #3d8bffe8;
+      }
+      .column-header {
+        background: #3d8bffe8;
+        text-transform: uppercase;
+        padding: 15px;
+        font-size: 11px;
+        border-right: 1px solid #3d8bffe8;
+      }
+      .row {
+        padding: 7px 14px;
+        border-left: 1px solid #3d8bffe8;
+        border-right: 1px solid #3d8bffe8;
+        border-bottom: 1px solid #3d8bffe8;
+      }
+      .alert {
+        background: #3d8bffe8;
+        padding: 20px;
+        margin: 20px 0;
+        line-height: 22px;
+        color: #333;
+      }
+      .socialmedia {
+        background: #3d8bffe8;
+        padding: 20px;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <table width="100%">
+        <tr>
+          <td width="100%">
+            <div
+              style="
+                background: #3d8bffe8;
+                font-size: 16px;
+                font-weight: bold;
+                height: 30px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                color: white;
+              "
+            >
+              Order invoice
+            </div>
+          </td>
+          <td></td>
+        </tr>
+      </table>
+      <br />
+      <h3 style="margin: 0">Invoice details</h3>
+      <br />
+      <table width="100%" style="border-collapse: collapse">
+        <tr>
+          <td widdth="50%" style="background: #eee; padding: 20px">
+            <strong>Date:</strong> <%= new
+            Date(order?.updatedAt)?.toLocaleString() %><br />
+            <strong>Payment type:</strong> <%= type %><br />
+          </td>
+          <td style="background: #eee; padding: 20px; width: 50%">
+            <strong>Order-nr:</strong> <%= order?._id %><br />
+            <strong>Bank uuid:</strong> <%= order?.bankUuid %><br />
+          </td>
+        </tr>
+      </table>
+      <br />
+      <table width="100%">
+        <tr>
+          <td style="width: 50%">
+            <table>
+              <tr>
+                <td style="padding-inline: 15px">
+                  <strong>Paid by</strong><br />
+                  <%= order?.customerName %><br />
+                  <%= order?.customerEmail %><br />
+                  <%= order?.customerAddress?.addressDescription %>, <%=
+                  order?.customerAddress?.city %>, <%=
+                  order?.customerAddress?.postalCode %><br />
+                  <%= order?.customerAddress?.country %>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td style="width: 50%">
+            <table>
+              <tr>
+                <td style="padding-inline: 15px">
+                  <strong>Paid to</strong><br />
+                  <%= business?.company?.companyName %><br />
+                  VAT# <%= business?.company?.companyVAT %><br />
+                  <%= business?.company?.companyAddress?.addressDescription %>,
+                  <%= business?.company?.companyAddress?.city %>, <%=
+                  business?.company?.companyAddress?.postalCode %><br />
+                  <%= business?.company?.companyAddress?.country %>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <br />
+      <div
+        style="
+          background: url(https://cdn4.iconfinder.com/data/icons/basic-ui-2-line/32/shopping-cart-shop-drop-trolly-128.png)
+            no-repeat;
+          width: 50px;
+          height: 60px;
+          margin-right: 10px;
+          background-position: center;
+          background-size: 25px;
+          float: left;
+          margin-bottom: 15px;
+          border-radius: 50%;
+        "
+      ></div>
+      <h3>Your TICKETS</h3>
+
+      <table
+        width="100%"
+        style="border-collapse: collapse; border-bottom: 1px solid #eee"
+      >
+        <tr>
+          <td width="40%" class="column-header">Ticket</td>
+          <td width="20%" class="column-header">Count</td>
+          <td width="20%" class="column-header">Price</td>
+          <td width="20%" class="column-header">Total</td>
+        </tr>
+        <% tickets.forEach(ticket => { %>
+        <tr>
+          <td class="row"><br /><%= ticket?.ticketAppearance?.ticketName %></td>
+          <td class="row"><%= ticket?.noOfTickets %></td>
+          <td class="row">
+            <%= ticket?.noOfTickets %> <span style="color: #777">X</span> <%=
+            ticket?.ticketAppearance?.ticketPrice %> $
+          </td>
+          <td class="row">
+            <%= ticket?.noOfTickets * ticket?.ticketAppearance?.ticketPrice %> $
+          </td>
+        </tr>
+        <% }); %>
+      </table>
+      <br />
+      <table width="100%" style="background: #eee; padding: 20px">
+        <tr>
+          <td>
+            <table width="300px" style="float: right">
+              <tr>
+                <td><strong>Sub-total:</strong></td>
+                <td style="text-align: right"><%= order?.orderAmount %> $</td>
+              </tr>
+              <tr>
+                <td><strong>Tax 8%:</strong></td>
+                <td style="text-align: right">
+                  <%= order?.orderAmount * 0.08 %> $
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Grand total:</strong></td>
+                <td style="text-align: right">
+                  <%= order?.orderAmount + (order?.orderAmount * 0.08) %> $
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <div class="alert">
+        Please be advised that the invoice details provided are valid for
+        taxation and other related purposes throughout Slovenia.
+      </div>
+    </div>
+    <!-- container -->
+    <div style="height: 50px" class="footer">
+      <img
+        src="https://partibucket.s3.eu-west-3.amazonaws.com/images/partikarte_data/partikarte-for-ticket-pdf.png"
+      />
+    </div>
+  </body>
+</html>
