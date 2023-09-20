@@ -78,7 +78,7 @@ const orderSchema = new mongoose.Schema({
     required: true,
   },
   autmatedMailSent: {
-    type: mongoose.Types.Boolean,
+    type: Boolean,
     default: false,
   },
 });
