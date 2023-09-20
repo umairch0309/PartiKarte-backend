@@ -77,6 +77,10 @@ const orderSchema = new mongoose.Schema({
     ref: "Business",
     required: true,
   },
+  autmatedMailSent: {
+    type: mongoose.Types.Boolean,
+    default: false,
+  },
 });
 
 orderSchema.plugin(timestamps);

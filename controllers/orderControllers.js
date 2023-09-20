@@ -77,6 +77,7 @@ export const createFreeOrder = async (req, res, next) => {
       customerName,
       paymentStatus: true,
       businessId: eventRef?.businessId,
+      autmatedMailSent: true,
     });
 
     actualTickets?.forEach((t) => {
@@ -191,6 +192,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
         addressDescription,
       },
       businessId: eventRef?.businessId,
+      autmatedMailSent: true,
     });
 
     actualTickets?.forEach((t) => {
@@ -420,12 +422,12 @@ export const createCardPaymentOrder = async (req, res, next) => {
 export const apiPaymentCallback = async (req, res, next) => {
   const { purchaseId, result } = req.body;
 
-  console.log(result, "payment result");
+  console.log(purchaseId, result, "payment result");
   try {
     if (result === "OK") {
       const order = await Order.findOneAndUpdate(
         { purchaseId },
-        { paymentStatus: true },
+        { paymentStatus: true, autmatedMailSent: true },
         { new: true }
       );
 
@@ -468,18 +470,25 @@ export const apiPaymentCallback = async (req, res, next) => {
       const pdfResult = await generateTickets(transformedTickets);
 
       console.log(pdfResult, "pdf result");
+      if (!order.autmatedMailSent) {
+        await SendTicketEmail({
+          customerName: order?.customerName,
+          eventName: event?.eventName,
+          email: order?.customerEmail,
+          attachments: pdfResult?.map((el, index) => ({
+            content: el.toString("base64"),
+            filename: `ticket${index}.pdf`,
+            type: "application/pdf",
+            disposition: "attachment",
+          })),
+        });
+      }
 
-      await SendTicketEmail({
-        customerName: order?.customerName,
-        eventName: event?.eventName,
-        email: order?.customerEmail,
-        attachments: pdfResult?.map((el, index) => ({
-          content: el.toString("base64"),
-          filename: `ticket${index}.pdf`,
-          type: "application/pdf",
-          disposition: "attachment",
-        })),
-      });
+      await Order.findOneAndUpdate(
+        { purchaseId },
+        { autmatedMailSent: true },
+        { new: true }
+      );
     } else {
       const order = Order.findOne({ purchaseId });
       if (order) {
