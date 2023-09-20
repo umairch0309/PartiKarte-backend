@@ -422,12 +422,12 @@ export const createCardPaymentOrder = async (req, res, next) => {
 export const apiPaymentCallback = async (req, res, next) => {
   const { purchaseId, result } = req.body;
 
-  console.log(purchaseId, result, "payment result");
+  console.log(req.body, "payment result");
   try {
     if (result === "OK") {
       const order = await Order.findOneAndUpdate(
         { purchaseId },
-        { paymentStatus: true, autmatedMailSent: true },
+        { paymentStatus: true },
         { new: true }
       );
 
@@ -437,40 +437,40 @@ export const apiPaymentCallback = async (req, res, next) => {
         console.log(" couldn't find event");
         return;
       }
+      if (!order?.autmatedMailSent) {
+        const transformedTickets = [];
 
-      const transformedTickets = [];
+        const tickets = order.tickets;
 
-      const tickets = order.tickets;
+        for (const ticket of tickets) {
+          const qrCodeData = `orderId=${order?._id}&&eventId=${event?._id}&&ticketId=${ticket?.ticketId}`;
+          const foundTicket = event?.tickets.find(
+            (t) => t._id?.toString() === ticket?.ticketId?.toString()
+          );
 
-      for (const ticket of tickets) {
-        const qrCodeData = `orderId=${order?._id}&&eventId=${event?._id}&&ticketId=${ticket?.ticketId}`;
-        const foundTicket = event?.tickets.find(
-          (t) => t._id?.toString() === ticket?.ticketId?.toString()
-        );
+          console.log(foundTicket, "found ticket", ticket, "ticket");
 
-        console.log(foundTicket, "found ticket", ticket, "ticket");
+          transformedTickets.push({
+            ticketId: ticket.ticketId,
+            noOfTickets: ticket.noOfTickets,
+            qrCodeData,
+            ticketAppearance: {
+              ...foundTicket?.ticketAppearance,
+              eventName: event?.eventName,
+              eventVenue: event?.eventVenue,
+              ticketPrice: foundTicket?.price,
+              ticketVat: foundTicket?.vat,
+              descriptionTicket: foundTicket?.descriptionTicket,
+            },
+          });
+        }
 
-        transformedTickets.push({
-          ticketId: ticket.ticketId,
-          noOfTickets: ticket.noOfTickets,
-          qrCodeData,
-          ticketAppearance: {
-            ...foundTicket?.ticketAppearance,
-            eventName: event?.eventName,
-            eventVenue: event?.eventVenue,
-            ticketPrice: foundTicket?.price,
-            ticketVat: foundTicket?.vat,
-            descriptionTicket: foundTicket?.descriptionTicket,
-          },
-        });
-      }
+        console.log(transformedTickets, "transformed tickets");
 
-      console.log(transformedTickets, "transformed tickets");
+        const pdfResult = await generateTickets(transformedTickets);
 
-      const pdfResult = await generateTickets(transformedTickets);
+        console.log(pdfResult, "pdf result");
 
-      console.log(pdfResult, "pdf result");
-      if (!order.autmatedMailSent) {
         await SendTicketEmail({
           customerName: order?.customerName,
           eventName: event?.eventName,
@@ -482,13 +482,13 @@ export const apiPaymentCallback = async (req, res, next) => {
             disposition: "attachment",
           })),
         });
-      }
 
-      await Order.findOneAndUpdate(
-        { purchaseId },
-        { autmatedMailSent: true },
-        { new: true }
-      );
+        await Order.findOneAndUpdate(
+          { purchaseId },
+          { autmatedMailSent: true },
+          { new: true }
+        );
+      }
     } else {
       const order = Order.findOne({ purchaseId });
       if (order) {
