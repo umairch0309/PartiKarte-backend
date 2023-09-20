@@ -124,11 +124,10 @@ export const createFreeOrder = async (req, res, next) => {
     }
     console.log(transformedTickets, "transformed tickets");
 
-    const business = await Business.findById(eventRef?.businessId);
-
     const pdfResult = await generateTickets(transformedTickets);
     console.log(pdfResult, "pdf result");
 
+    const business = await Business.findById(eventRef?.businessId);
     const invoiceResult = await generateInvoice({
       order: neworder,
       business,
@@ -151,7 +150,7 @@ export const createFreeOrder = async (req, res, next) => {
         })),
         ...invoiceResult?.map((el, index) => ({
           content: el?.toString("base64"),
-          filename: `ticket${index}.pdf`,
+          filename: `Invoice.pdf`,
           type: "application/pdf",
           disposition: "attachment",
         })),
@@ -261,16 +260,34 @@ export const createBankPaymentOrder = async (req, res, next) => {
 
     console.log(pdfResult, "pdf result");
 
+    const business = await Business.findById(eventRef?.businessId);
+    const invoiceResult = await generateInvoice({
+      order: neworder,
+      business,
+      tickets: transformedTickets,
+      type: "Free Order - Online",
+    });
+
+    console.log(invoiceResult, "invoice result");
+
     SendTicketEmail({
       email: customerEmail,
       customerName,
       eventName: eventRef?.eventName,
-      attachments: pdfResult?.map((el, index) => ({
-        content: el.toString("base64"),
-        filename: `ticket${index}.pdf`,
-        type: "application/pdf",
-        disposition: "attachment",
-      })),
+      attachments: [
+        ...pdfResult?.map((el, index) => ({
+          content: el.toString("base64"),
+          filename: `ticket${index}.pdf`,
+          type: "application/pdf",
+          disposition: "attachment",
+        })),
+        ...invoiceResult?.map((el, index) => ({
+          content: el?.toString("base64"),
+          filename: `Invoice.pdf`,
+          type: "application/pdf",
+          disposition: "attachment",
+        })),
+      ],
     });
 
     res.status(201).send({ message: "Order has been saved successfully." });
@@ -491,16 +508,34 @@ export const apiPaymentCallback = async (req, res, next) => {
 
         console.log(pdfResult, "pdf result");
 
+        const business = await Business.findById(event?.businessId);
+        const invoiceResult = await generateInvoice({
+          order,
+          business,
+          tickets: transformedTickets,
+          type: "Free Order - Online",
+        });
+
+        console.log(invoiceResult, "invoice result");
+
         await SendTicketEmail({
           customerName: order?.customerName,
           eventName: event?.eventName,
           email: order?.customerEmail,
-          attachments: pdfResult?.map((el, index) => ({
-            content: el.toString("base64"),
-            filename: `ticket${index}.pdf`,
-            type: "application/pdf",
-            disposition: "attachment",
-          })),
+          attachments: [
+            ...pdfResult?.map((el, index) => ({
+              content: el.toString("base64"),
+              filename: `ticket${index}.pdf`,
+              type: "application/pdf",
+              disposition: "attachment",
+            })),
+            ...invoiceResult?.map((el, index) => ({
+              content: el?.toString("base64"),
+              filename: `Invoice.pdf`,
+              type: "application/pdf",
+              disposition: "attachment",
+            })),
+          ],
         });
 
         await Order.findOneAndUpdate(
