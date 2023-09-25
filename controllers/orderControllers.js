@@ -545,7 +545,7 @@ export const apiPaymentCallback = async (req, res, next) => {
         );
       }
     } else {
-      const order = Order.findOne({ purchaseId });
+      const order = await Order.findOne({ purchaseId });
       if (order) {
         const event = await Event.findById(order?.eventId);
         event.revenue -= order.orderAmount;
