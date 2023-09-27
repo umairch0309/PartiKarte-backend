@@ -553,7 +553,7 @@ export const apiPaymentCallback = async (req, res, next) => {
         await event.save();
       }
     }
-    return res.status(200).send();
+    return res.status(200).send("OK");
   } catch (error) {
     return next(ServerError(error));
   }
