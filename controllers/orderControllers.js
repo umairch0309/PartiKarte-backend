@@ -261,6 +261,14 @@ export const createBankPaymentOrder = async (req, res, next) => {
     console.log(pdfResult, "pdf result");
 
     const business = await Business.findById(eventRef?.businessId);
+    await Business.findByIdAndUpdate(business?._id, {
+      earnings: {
+        currentBalance:
+          (business?.earnings?.currentBalance || 0) + parseInt(orderAmount),
+        totalEarnings:
+          (business?.earnings?.totalEarnings || 0) + parseInt(orderAmount),
+      },
+    });
     const invoiceResult = await generateInvoice({
       order: neworder,
       business,
@@ -469,6 +477,18 @@ export const apiPaymentCallback = async (req, res, next) => {
       );
 
       const event = await Event.findById(order?.eventId);
+      const businessForCalc = await Business.findById(event?.businessId);
+
+      await Business.findByIdAndUpdate(event?.businessId, {
+        earnings: {
+          currentBalance:
+            (businessForCalc?.earnings?.currentBalance || 0) +
+            parseInt(orderAmount),
+          totalEarnings:
+            (businessForCalc?.earnings?.totalEarnings || 0) +
+            parseInt(orderAmount),
+        },
+      });
 
       if (!event) {
         console.log(" couldn't find event");

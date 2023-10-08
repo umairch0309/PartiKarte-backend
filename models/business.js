@@ -170,6 +170,16 @@ const businessUserSchema = new mongoose.Schema(
         trim: true,
       },
     },
+    earnings: {
+      currentBalance: {
+        type: Number,
+        default: 0,
+      },
+      totalEarnings: {
+        type: Number,
+        default: 0,
+      },
+    },
   },
   { collection: "businesses" }
 );

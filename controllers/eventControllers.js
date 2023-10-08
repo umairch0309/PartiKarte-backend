@@ -300,13 +300,15 @@ export const deleteEvent = async (req, res, next) => {
 };
 
 export const getAllEventsForCustomer = async (req, res, next) => {
+  const currentDate = new Date();
+
   try {
     const eventsWithTickets = await Event.aggregate([
-      // {
-      //   $match: {
-      //     tickets: { $exists: true, $not: { $size: 0 } },
-      //   },
-      // },
+      {
+        $match: {
+          eventEnd: { $gte: currentDate },
+        },
+      },
       {
         $sort: {
           _id: -1,

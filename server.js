@@ -7,8 +7,10 @@ import connectDB from "./config/db.js";
 import path from "path";
 import morgan from "morgan";
 import { fileURLToPath } from "url";
+import cron from "node-cron";
 
 import HttpError from "./helpers/HttpError.js";
+import SendBusinessesMoney from "./services/SendBusinessesMoney.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +25,10 @@ const port = process.env.PORT || 5600;
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 app.use(upload.any());
+
+cron.schedule("0 0 1 * *", async () => {
+  await SendBusinessesMoney();
+});
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
