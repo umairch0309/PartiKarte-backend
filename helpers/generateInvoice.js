@@ -16,7 +16,7 @@ const generateInvoice = async (data) => {
     );
 
     if (html) {
-      console.log("generating pdf of invoice", html);
+      // console.log("generating pdf of invoice", html);
       result = await generatePDF([html]);
     }
     console.log("Invoice generated");

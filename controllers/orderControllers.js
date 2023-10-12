@@ -66,6 +66,7 @@ export const createFreeOrder = async (req, res, next) => {
       return {
         ticketId: ticket.ticketId,
         noOfTickets: ticket.noOfTickets,
+        allQuestions: ticket.allQuestions,
       };
     });
 
@@ -79,7 +80,7 @@ export const createFreeOrder = async (req, res, next) => {
       customerName,
       paymentStatus: true,
       businessId: eventRef?.businessId,
-      autmatedMailSent: true,
+      automatedMailSent: true,
     });
 
     actualTickets?.forEach((t) => {
@@ -122,7 +123,7 @@ export const createFreeOrder = async (req, res, next) => {
         descriptionTicket: foundTicket?.descriptionTicket,
       };
     }
-    console.log(transformedTickets, "transformed tickets");
+    // console.log(transformedTickets, "transformed tickets");
 
     const pdfResult = await generateTickets(transformedTickets);
     console.log(pdfResult, "pdf result");
@@ -211,7 +212,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
         addressDescription,
       },
       businessId: eventRef?.businessId,
-      autmatedMailSent: true,
+      automatedMailSent: true,
     });
 
     actualTickets?.forEach((t) => {
@@ -494,7 +495,7 @@ export const apiPaymentCallback = async (req, res, next) => {
         console.log(" couldn't find event");
         return;
       }
-      if (!order?.autmatedMailSent) {
+      if (!order?.automatedMailSent) {
         const transformedTickets = [];
 
         const tickets = order.tickets;
@@ -560,7 +561,7 @@ export const apiPaymentCallback = async (req, res, next) => {
 
         await Order.findOneAndUpdate(
           { purchaseId },
-          { autmatedMailSent: true },
+          { automatedMailSent: true },
           { new: true }
         );
       }

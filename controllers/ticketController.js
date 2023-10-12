@@ -70,6 +70,7 @@ export const createNewTicket = async (req, res, next) => {
     descriptionWeb,
     descriptionTicket,
     ticketType,
+    questions,
   } = req.body;
 
   console.log(req.body);
@@ -109,6 +110,7 @@ export const createNewTicket = async (req, res, next) => {
       vatPercentage,
       vat,
       priceWithVAT,
+      questions,
       descriptionWeb,
       descriptionTicket,
       remainingCapacity:
@@ -162,6 +164,7 @@ export const updateTicket = async (req, res, next) => {
     descriptionWeb,
     ticketType,
     descriptionTicket,
+    questions,
   } = req.body;
 
   try {
@@ -194,7 +197,9 @@ export const updateTicket = async (req, res, next) => {
     event.tickets[ticketIndex].ticketName = ticketName;
     event.tickets[ticketIndex].validFrom = validFrom;
     event.tickets[ticketIndex].validTo = validTo;
+    event.tickets[ticketIndex].questions = questions;
     event.tickets[ticketIndex].maxCapacity = calculatedMax;
+    event.tickets[ticketIndex].ticketType = ticketType;
     event.tickets[ticketIndex].capacityLimitation =
       capacityLimitation == "true" && parseInt(maxCapacity) > 0
         ? "limited"

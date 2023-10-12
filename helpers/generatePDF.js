@@ -27,6 +27,8 @@ async function generatePDF(htmlArray) {
       format: "A4",
       height: `${height + 20}px`,
       printBackground: true,
+      dpi: 72, // Lower DPI
+      quality: 40, // Lower image quality
     });
 
     pdfPromises.push(pdfBuffer);

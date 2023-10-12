@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <!-- <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
-    />
+    /> -->
     <style>
       * {
         box-sizing: border-box;
@@ -37,7 +37,7 @@
       h6 {
         margin: 0;
         padding: 0;
-        font-family: "Outfit", sans-serif;
+        font-family: "Arial", sans-serif;
       }
 
       .main-section {
@@ -171,24 +171,31 @@
           <p class="label">venue</p>
           <h4 class="text"><%= eventVenue %></h4>
         </div>
+        <% if (eventAddress && eventAddress.eventLink) { %>
+        <div class="box">
+          <p class="label">Event Link</p>
+          <h4 class="text"><%= eventAddress.eventLink %></h4>
+        </div>
+        <% } else { %>
         <div class="side-by-side">
           <div class="box">
-            <p class="label">city</p>
-            <h4 class="text"><%= eventAddress?.city %></h4>
+            <p class="label">City</p>
+            <h4 class="text"><%= eventAddress.city %></h4>
           </div>
           <div class="box">
             <p class="label">Country</p>
-            <h4 class="text"><%= eventAddress?.country %></h4>
+            <h4 class="text"><%= eventAddress.country %></h4>
           </div>
           <div class="box">
-            <p class="label">Postal code</p>
-            <h4 class="text"><%= eventAddress?.postalCode %></h4>
+            <p class="label">Postal Code</p>
+            <h4 class="text"><%= eventAddress.postalCode %></h4>
           </div>
         </div>
         <div class="box">
-          <p class="label">address</p>
-          <h4 class="text"><%= eventAddress?.addressDescription %></h4>
+          <p class="label">Address</p>
+          <h4 class="text"><%= eventAddress.addressDescription %></h4>
         </div>
+        <% } %>
       </div>
 
       <!-- TICKET -->
@@ -237,9 +244,9 @@
             </div>
           </div>
         </div>
-        <div class="logo-section">
+        <!-- <div class="logo-section">
           <img src="<%= logo %>" class="logo-image" />
-        </div>
+        </div> -->
       </div>
     </div>
     <div class="footer">

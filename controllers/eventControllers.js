@@ -5,6 +5,17 @@ import Event from "../models/event.js";
 import Business from "../models/business.js";
 import uploadS3Image from "../utils/uploadS3Image.js";
 
+function generateRandomCode(length) {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    code += characters.charAt(randomIndex);
+  }
+  return code;
+}
+
 export const getAllEvents = async (req, res, next) => {
   const userId = req.userId;
 
@@ -109,6 +120,20 @@ export const createNewEvent = async (req, res, next) => {
       eventBannerLink = uploadedEventBanner.uploadedImagePath;
     }
 
+    const generateEventCode = async () => {
+      let uniqueCodeGenerated = false;
+      let uniqueCode;
+
+      while (!uniqueCodeGenerated) {
+        uniqueCode = generateRandomCode(8);
+        const eventWithCode = await Event.findOne({ code: uniqueCode });
+        if (!eventWithCode) {
+          uniqueCodeGenerated = true;
+        }
+      }
+      return uniqueCode;
+    };
+
     const newEvent = new Event({
       eventName,
       eventStart,
@@ -128,6 +153,7 @@ export const createNewEvent = async (req, res, next) => {
       eventVenue,
       eventDescription,
       businessId: myBusiness._id,
+      eventCode: await generateEventCode(),
     });
 
     const savedEvent = await newEvent.save();

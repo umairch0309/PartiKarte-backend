@@ -27,6 +27,20 @@ const ticketSchema = new mongoose.Schema({
   noOfTickets: {
     type: Number,
   },
+  allQuestions: [
+    {
+      questions: [
+        {
+          label: {
+            type: String,
+          },
+          answer: {
+            type: String,
+          },
+        },
+      ],
+    },
+  ],
 });
 
 const orderSchema = new mongoose.Schema({
@@ -77,7 +91,7 @@ const orderSchema = new mongoose.Schema({
     ref: "Business",
     required: true,
   },
-  autmatedMailSent: {
+  automatedMailSent: {
     type: Boolean,
     default: false,
   },

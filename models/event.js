@@ -91,6 +91,13 @@ const ticketSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  questions: [
+    {
+      label: {
+        type: String,
+      },
+    },
+  ],
   ticketAppearance: {
     logo: {
       type: String,
@@ -188,6 +195,10 @@ const eventSchema = new mongoose.Schema({
   totalPaidOut: {
     type: Number,
     default: 0,
+  },
+  eventCode: {
+    type: String,
+    unique: true,
   },
   businessId: {
     type: mongoose.Schema.Types.ObjectId,
