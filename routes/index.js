@@ -9,6 +9,7 @@ import { news } from "./news.js";
 import { orders } from "./orders.js";
 import { guests } from "./guests.js";
 import { transactions } from "./transactions.js";
+import { coupons } from "./coupon.js";
 const router = Router();
 
 router.use("/business", business);
@@ -17,6 +18,7 @@ router.use("/auth", auth);
 router.use("/", news);
 router.use("/transactions", transactions);
 router.use("/", events);
+router.use("/", coupons);
 router.use("/", tickets);
 router.use("/", guests);
 router.use("/", contact);

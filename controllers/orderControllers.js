@@ -628,6 +628,10 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
+    if (!eventId || eventId === "undefined") {
+      return next(new HttpError("Invalid Id", 404));
+    }
+
     if (interval === "monthly") {
       const endDate = new Date(); // Today's date
       const startDate = new Date();
@@ -773,6 +777,10 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
 export const getAllOrdersByEvent = async (req, res, next) => {
   const { eventId } = req.params;
   try {
+    if (!eventId || eventId === "undefined") {
+      return next(new HttpError("Invalid Id", 404));
+    }
+
     const latestOrders = await Order.find({
       eventId,
       paymentStatus: true,
