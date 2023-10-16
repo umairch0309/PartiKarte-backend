@@ -59,7 +59,7 @@ export const register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     user = new User({
-      role: "admin",
+      role: "owner",
       email,
       username,
       password: hashedPassword,

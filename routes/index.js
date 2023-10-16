@@ -10,12 +10,14 @@ import { orders } from "./orders.js";
 import { guests } from "./guests.js";
 import { transactions } from "./transactions.js";
 import { coupons } from "./coupon.js";
+import { roles } from "./roles.js";
 const router = Router();
 
 router.use("/business", business);
 router.use("/", orders);
 router.use("/auth", auth);
 router.use("/", news);
+router.use("/", roles);
 router.use("/transactions", transactions);
 router.use("/", events);
 router.use("/", coupons);

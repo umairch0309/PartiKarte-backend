@@ -167,6 +167,8 @@ export const updateTicket = async (req, res, next) => {
     questions,
   } = req.body;
 
+  console.log(req.body, "req.body");
+
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
     if (!user || !business) {
@@ -189,7 +191,7 @@ export const updateTicket = async (req, res, next) => {
     const { vat, priceWithVAT } = calculatePriceWithVAT(price, vatPercentage);
 
     const calculatedMax =
-      capacityLimitation == "true" && parseInt(maxCapacity) > 0
+      capacityLimitation == true && parseInt(maxCapacity) > 0
         ? parseInt(maxCapacity)
         : 999999999;
 
@@ -201,13 +203,13 @@ export const updateTicket = async (req, res, next) => {
     event.tickets[ticketIndex].maxCapacity = calculatedMax;
     event.tickets[ticketIndex].ticketType = ticketType;
     event.tickets[ticketIndex].capacityLimitation =
-      capacityLimitation == "true" && parseInt(maxCapacity) > 0
+      capacityLimitation == true && parseInt(maxCapacity) > 0
         ? "limited"
         : "unlimited";
     event.tickets[ticketIndex].paymentType =
-      paidTicket == "true" && parseFloat(price) > 0 ? "paid" : "free";
+      paidTicket == true && parseFloat(price) > 0 ? "paid" : "free";
     event.tickets[ticketIndex].price =
-      paidTicket == "true" && parseFloat(price) > 0 ? parseFloat(price) : 0;
+      paidTicket == true && parseFloat(price) > 0 ? parseFloat(price) : 0;
     event.tickets[ticketIndex].vatPercentage = vatPercentage;
     event.tickets[ticketIndex].vat = vat;
     event.tickets[ticketIndex].priceWithVAT = priceWithVAT;

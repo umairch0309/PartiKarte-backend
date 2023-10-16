@@ -54,6 +54,7 @@ export const addBusinessManager = async (req, res, next) => {
     city,
     postalCode,
     country,
+    permissions,
   } = req.body;
 
   const [IDFront, IDBack] = req.files;
@@ -111,6 +112,7 @@ export const addBusinessManager = async (req, res, next) => {
         password: hashedPassword,
         role,
         dob,
+        permissions,
         IDFront: uploadedIDFront.uploadedImagePath,
         IDBack: uploadedIDBack.uploadedImagePath,
         guestType,
