@@ -12,6 +12,7 @@ import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { createValidationError } from "../helpers/HttpError.js";
 import { findBusinessAndUser } from "../DAL/common.js";
 import { SendOtpEmail, SendVerifyOtpEmail } from "../helpers/sendEmail.js";
+import Role from "../models/role.js";
 
 /**
  * @method  register
@@ -193,12 +194,15 @@ export const authenticate = async (req, res, next) => {
       expiresIn: "90h",
     });
 
+    const permissions = await Role.findById(user?.permissions);
+
     res.status(200).json({
       message: "Login successful",
       data: {
         userId: user._id,
         token,
         role: user.role,
+        permissions: permissions?.permissions || [],
         businessId: user.businessId,
       },
     });
@@ -405,9 +409,18 @@ export const profileDetails = async (req, res, next) => {
       return next(new HttpError("Invalid user id", 400));
     }
 
-    res
-      .status(200)
-      .json({ message: "Business user", data: { user, business } });
+    const permissions = await Role.findById(user?.permissions);
+
+    res.status(200).json({
+      message: "Business user",
+      data: {
+        user: {
+          ...user?.toObject(),
+          permissions: permissions?.permissions || [],
+        },
+        business,
+      },
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

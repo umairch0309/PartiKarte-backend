@@ -40,8 +40,8 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     permissions: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
     },
     surname: {
       type: String,
