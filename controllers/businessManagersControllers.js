@@ -10,6 +10,7 @@ import { findBusinessAndUser } from "../DAL/common.js";
 import { generateUrlSlug } from "../helpers/helpers.js";
 import Business from "../models/business.js";
 import User from "../models/user.js";
+import { SendMemberAdditionEmail } from "../helpers/sendEmail.js";
 
 export const getAllBusinessManagers = async (req, res, next) => {
   const userId = req.userId;
@@ -132,6 +133,13 @@ export const addBusinessManager = async (req, res, next) => {
       await newUser.save();
       // Save the new business
       savedBusiness = await myBusiness.save();
+
+      await SendMemberAdditionEmail({
+        email,
+        password: password || "123456",
+        role,
+        company: myBusiness?.company?.companyName,
+      });
     }
 
     res

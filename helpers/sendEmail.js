@@ -93,3 +93,47 @@ export const SendTicketEmail = async (data) => {
   );
   return result;
 };
+
+export const SendMemberAdditionEmail = async (data) => {
+  const { email } = data;
+  const subject = "Welcome to the Team";
+  const result = sendEmail(
+    email,
+    subject,
+    {
+      ...data,
+      subject,
+    },
+    "welcome-member"
+  );
+  return result;
+};
+
+export const SendGuestAddition = async (data) => {
+  const { email } = data;
+  const subject = "Most Welcome to the Event";
+  const result = sendEmail(
+    email,
+    subject,
+    {
+      ...data,
+      subject,
+    },
+    "welcome-guest"
+  );
+  return result;
+};
+
+export const SendPasswordChangedEmail = async (data) => {
+  const { email } = data;
+  const subject = "Password Changed Successfully!";
+  const result = sendEmail(
+    email,
+    subject,
+    {
+      subject,
+    },
+    "password-changed"
+  );
+  return result;
+};

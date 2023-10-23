@@ -11,7 +11,11 @@ import { generateOTP, generateUrlSlug } from "../helpers/helpers.js";
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { createValidationError } from "../helpers/HttpError.js";
 import { findBusinessAndUser } from "../DAL/common.js";
-import { SendOtpEmail, SendVerifyOtpEmail } from "../helpers/sendEmail.js";
+import {
+  SendOtpEmail,
+  SendPasswordChangedEmail,
+  SendVerifyOtpEmail,
+} from "../helpers/sendEmail.js";
 import Role from "../models/role.js";
 
 /**
@@ -251,6 +255,10 @@ export const updatePassword = async (req, res, next) => {
       return res.status(404).json({ error: "Something went wrong" });
     }
 
+    await SendPasswordChangedEmail({
+      email,
+    });
+
     res.status(200).json({ message: "Password updated" });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -391,6 +399,10 @@ export const resetPassword = async (req, res, next) => {
     if (!updatedUser) {
       return res.status(404).json({ error: "Something went wrong" });
     }
+
+    await SendPasswordChangedEmail({
+      email,
+    });
 
     res.status(200).json({ message: "Password updated" });
   } catch (error) {

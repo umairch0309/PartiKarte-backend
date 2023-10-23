@@ -1,5 +1,7 @@
 import { findBusinessAndUser } from "../DAL/common.js";
 import Guest from "../models/guest.js";
+import { SendGuestAddition } from "../helpers/sendEmail.js";
+import Event from "../models/event.js";
 
 // Create a new guest
 export const createGuest = async (req, res) => {
@@ -13,6 +15,15 @@ export const createGuest = async (req, res) => {
 
     const newGuest = new Guest({ ...req.body, businessId: business?._id });
     await newGuest.save();
+
+    const event = await Event.findById(req.body.eventId);
+
+    await SendGuestAddition({
+      email: req.body.email,
+      event: event?.eventName,
+      company: business?.company?.companyName,
+    });
+
     return res.status(201).json({ message: "Guest added successfully" });
   } catch (error) {
     return res.status(500).json({ error: "Failed to create guest." });
