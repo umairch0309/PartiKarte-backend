@@ -7,6 +7,8 @@ import {
   getAllEventsInApp,
   getEventInApp,
   scanEventInApp,
+  markGuestAsPresent,
+  getAllGuestsInApp,
 } from "../controllers/appControllers.js";
 
 const router = express.Router();
@@ -18,5 +20,8 @@ router.get("/all-events", verifyToken, getAllEventsInApp);
 router.get("/event/:eventId", verifyToken, getEventInApp);
 
 router.get("/scan-event", verifyToken, scanEventInApp);
+
+router.get("/guests/:eventId", verifyToken, getAllGuestsInApp);
+router.get("/present-guests-present/:eventId", verifyToken, markGuestAsPresent);
 
 export { router as app };

@@ -11,6 +11,7 @@ import Role from "../models/role.js";
 import { generateOTP } from "../helpers/helpers.js";
 import Order from "../models/order.js";
 import User from "../models/user.js";
+import Guest from "../models/guest.js";
 
 // sign in as guest
 export async function signInAsGuest(req, res, next) {
@@ -164,5 +165,39 @@ export const scanEventInApp = async (req, res, next) => {
       .json({ message: "Ticket scanned successfully", order, event });
   } catch (error) {
     return next(ServerError(error));
+  }
+};
+
+// Get all guests
+export const getAllGuestsInApp = async (req, res) => {
+  const { eventId } = req.params;
+
+  try {
+    if (eventId && eventId !== "undefined") {
+      const guests = await Guest.find({ eventId }).sort({ _id: -1 });
+      return res.status(200).json({ guests });
+    }
+    return res.status(404).json({ message: "Not found" });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch guests." });
+  }
+};
+
+// Get all guests
+export const markGuestAsPresent = async (req, res) => {
+  const { guestId } = req.params;
+
+  try {
+    if (guestId && guestId !== "undefined") {
+      const guest = await Guest.findByIdAndUpdate(
+        guestId,
+        { isPresent: true },
+        { new: true }
+      );
+      return res.status(200).json({ guest });
+    }
+    return res.status(404).json({ message: "Not found" });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch guests." });
   }
 };

@@ -36,6 +36,10 @@ const guestSchema = new mongoose.Schema({
     type: mongoose.Types.ObjectId,
     ref: "User",
   },
+  isPresent: {
+    type: Boolean,
+    default: false,
+  },
   eventId: {
     type: mongoose.Types.ObjectId,
     ref: "Event",

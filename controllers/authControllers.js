@@ -17,6 +17,7 @@ import {
   SendVerifyOtpEmail,
 } from "../helpers/sendEmail.js";
 import Role from "../models/role.js";
+import Guest from "../models/guest.js";
 
 /**
  * @method  register
