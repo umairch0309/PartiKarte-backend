@@ -10,6 +10,9 @@ export const successUrl = "http://13.38.94.55/checkout/payment-success";
 export const errorUrl = "http://13.38.94.55/checkout/payment-error";
 export const cancelUrl = "http://13.38.94.55/checkout/payment-error";
 
+// Bank Transfer urls
+export const psuIpAddress = "http://13.38.94.55";
+
 // ssl payment usls
 // export const callbackUrl = "https://partikarte.si/api/result-api-callback";
 // export const successUrl = "https://partikarte.si/checkout/payment-success";

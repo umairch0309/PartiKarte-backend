@@ -13,6 +13,7 @@ import {
   apiPassword,
   apiUsername,
   sharedSecret,
+  psuIpAddress,
 } from "../constants.js";
 import { findBusinessAndUser } from "../DAL/common.js";
 import generateTickets from "../helpers/generateTickets.js";
@@ -195,6 +196,16 @@ export const createBankPaymentOrder = async (req, res, next) => {
         noOfTickets: ticket.noOfTickets,
       };
     });
+
+    const currentDate = new Date();
+    const headers = {
+      "X-IBM-Client-Id": "f8ec4fa716fcd3bfe1ece10e131bb5a8",
+      Authorization: "Bearer REPLACE_BEARER_TOKEN",
+      "X-Request-ID": `${currentDate.getTime()}`,
+      "PSU-IP-Address": psuIpAddress,
+      "Initialized-By-PSU": false,
+      "Content-Type": "application/json",
+    };
 
     const neworder = new Order({
       eventId: new mongoose.Types.ObjectId(eventId),
@@ -460,7 +471,7 @@ export const createCardPaymentOrder = async (req, res, next) => {
       .status(201)
       .send({ message: "Order has been saved successfully." });
   } catch (error) {
-    console.error(error);
+    console.error(error, "error in created payment with card");
     return res.status(500).send({ message: "Server error" });
   }
 };

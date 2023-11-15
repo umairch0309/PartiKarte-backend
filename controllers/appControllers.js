@@ -138,21 +138,21 @@ export const scanEventInApp = async (req, res, next) => {
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return next(new HttpError("Invalid order id", 400));
+      return next(new HttpError("Invalid", 400));
     }
 
     const event = await Event.findById(eventId);
     if (!event) {
-      return next(new HttpError("Invalid event id", 400));
+      return next(new HttpError("Invalid", 400));
     }
 
     const ticket = order.tickets.find((ticket) => ticket.ticketId == ticketId);
     if (!ticket) {
-      return next(new HttpError("Invalid ticket id", 400));
+      return next(new HttpError("Invalid", 400));
     }
 
     if (ticket.scannedTickets >= ticket.noOfTickets) {
-      return next(new HttpError("Ticket already scanned", 400));
+      return next(new HttpError("Exists", 400));
     } else {
       ticket.scannedTickets += 1;
       await order.save();
@@ -160,9 +160,7 @@ export const scanEventInApp = async (req, res, next) => {
       await event.save();
     }
 
-    res
-      .status(200)
-      .json({ message: "Ticket scanned successfully", order, event });
+    res.status(200).json({ message: "Success", order, event });
   } catch (error) {
     return next(ServerError(error));
   }
