@@ -108,7 +108,7 @@ export const getAllEventsInApp = async (req, res, next) => {
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
     if (!user || !business) {
-      return next(new HttpError("Invalid id", 400));
+      return next(new HttpError("Invalid user id", 400));
     }
 
     const events = await Event.find({ businessId: business?._id }).sort({
