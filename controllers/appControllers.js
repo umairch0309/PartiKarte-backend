@@ -21,7 +21,10 @@ export async function signInAsGuest(req, res, next) {
     if (!event) {
       return res.status(404).json({ message: "Invalid code." });
     }
-    return res.json(event);
+    const token = jwt.sign({ _id: eventCode }, process.env.JWT_SECRET, {
+      expiresIn: "90h",
+    });
+    return res.json({ event, token });
   } catch (err) {
     return ServerError(err);
   }

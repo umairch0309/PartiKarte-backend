@@ -197,9 +197,43 @@ export const createBankPaymentOrder = async (req, res, next) => {
       };
     });
 
+    let recievedToken;
+
+    const tokenUrl =
+      "https://api-oauth.bankart.si/psd2/skb/sandbox/oauth2/token";
+    const clientId = "f8ec4fa716fcd3bfe1ece10e131bb5a8";
+    const code =
+      "AANNq0z-OOSOORVQqsT9OlENetzg7I4QqpC8GUyoMKBRkZiBydlvX-FXPtzw3Ocm-X_krGHrivbVXgMvVMEjFTjzOHxkLMO-ZxgNdhASOcsC7g";
+
+    const tokenGettingData = {
+      grant_type: "authorization_code",
+      client_id: clientId,
+      code: code,
+    };
+
+    const headersToGetToken = {
+      "Content-Type": "application/x-www-form-urlencoded",
+      accept: "application/json",
+    };
+
+    axios
+      .post(tokenUrl, new URLSearchParams(tokenGettingData), {
+        headersToGetToken,
+      })
+      .then((response) => {
+        console.log("Token response:", response?.data);
+        recievedToken = response?.data?.access_token;
+      })
+      .catch((error) => {
+        console.error(
+          "Error making token request:",
+          error.response ? error.response.data : error.message
+        );
+      });
+
     const currentDate = new Date();
     const headers = {
-      "X-IBM-Client-Id": "f8ec4fa716fcd3bfe1ece10e131bb5a8",
+      "X-IBM-Client-Id": clientId,
       Authorization: "Bearer REPLACE_BEARER_TOKEN",
       "X-Request-ID": `${currentDate.getTime()}`,
       "PSU-IP-Address": psuIpAddress,
