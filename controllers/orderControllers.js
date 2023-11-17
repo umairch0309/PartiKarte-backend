@@ -216,20 +216,20 @@ export const createBankPaymentOrder = async (req, res, next) => {
       accept: "application/json",
     };
 
-    axios
-      .post(tokenUrl, new URLSearchParams(tokenGettingData), {
-        headersToGetToken,
-      })
-      .then((response) => {
-        console.log("Token response:", response?.data);
-        recievedToken = response?.data?.access_token;
-      })
-      .catch((error) => {
-        console.error(
-          "Error making token request:",
-          error.response ? error.response.data : error.message
-        );
-      });
+    // axios
+    //   .post(tokenUrl, new URLSearchParams(tokenGettingData), {
+    //     headersToGetToken,
+    //   })
+    //   .then((response) => {
+    //     console.log("Token response:", response?.data);
+    //     recievedToken = response?.data?.access_token;
+    //   })
+    //   .catch((error) => {
+    //     console.error(
+    //       "Error making token request:",
+    //       error.response ? error.response.data : error.message
+    //     );
+    //   });
 
     const currentDate = new Date();
     const headers = {
