@@ -194,3 +194,42 @@ export const getCoupon = async (req, res, next) => {
     res.status(500).send("Server error");
   }
 };
+
+export const validateCoupon = async (req, res, next) => {
+  const { eventId, couponCode } = req.body;
+
+  try {
+    if (
+      !eventId ||
+      eventId === "undefined" ||
+      !couponCode ||
+      couponCode === "undefined"
+    ) {
+      return next(new HttpError("Invalid coupon code!", 404));
+    }
+
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      return next(new HttpError("Invalid coupon code!", 404));
+    }
+
+    const coupon = await Coupon.findOne({
+      eventId: event?._id,
+      code: couponCode,
+    });
+
+    if (!coupon) {
+      return next(new HttpError("Couldn't find! Invalid coupon code.", 404));
+    }
+
+    if (coupon?.isExpired) {
+      return next(new HttpError("Coupon is expired.", 404));
+    }
+
+    res.status(200).send({ message: "Coupon applied successfully", coupon });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
+  }
+};

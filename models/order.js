@@ -85,6 +85,13 @@ const orderSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  couponId: {
+    type: mongoose.Types.ObjectId,
+    ref: "Coupon",
+  },
+  couponCode: {
+    type: String,
+  },
   eventId: {
     type: mongoose.Types.ObjectId,
     ref: "Event",

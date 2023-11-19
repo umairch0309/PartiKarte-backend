@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { isImageFile } from "../helpers/helpers.js";
+import { generateRandomCode, isImageFile } from "../helpers/helpers.js";
 import { userSchema } from "../helpers/validation.js";
 import uploadS3Image from "../utils/uploadS3Image.js";
 import HttpError, {
@@ -49,7 +49,6 @@ export const addBusinessManager = async (req, res, next) => {
     email,
     role,
     dob,
-    password,
     guestType,
     addressDescription,
     city,
@@ -57,6 +56,8 @@ export const addBusinessManager = async (req, res, next) => {
     country,
     permissions,
   } = req.body;
+
+  const password = generateRandomCode(8);
 
   const [IDFront, IDBack] = req.files;
 

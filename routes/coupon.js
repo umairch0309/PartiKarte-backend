@@ -6,6 +6,7 @@ import {
   expireCoupon,
   activateCoupon,
   getCoupon,
+  validateCoupon,
 } from "../controllers/couponControllers.js";
 
 const router = express.Router();
@@ -19,5 +20,7 @@ router.put("/coupon/update/:eventId/:id", verifyToken, updateCoupon);
 router.put("/coupon/expire/:eventId/:id", verifyToken, expireCoupon);
 
 router.put("/coupon/activate/:eventId/:id", verifyToken, activateCoupon);
+
+router.post("/coupon/validate", validateCoupon);
 
 export { router as coupons };

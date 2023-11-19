@@ -20,6 +20,7 @@ import generateTickets from "../helpers/generateTickets.js";
 import { SendTicketEmail } from "../helpers/sendEmail.js";
 import generateInvoice from "../helpers/generateInvoice.js";
 import Business from "../models/business.js";
+import Coupon from "../models/coupon.js";
 
 function generateUniqueTransactionId() {
   const timestamp = Date.now();
@@ -181,6 +182,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
     country,
     postalCode,
     addressDescription,
+    couponCode,
   } = req.body;
   try {
     const eventRef = await Event.findById(eventId);
@@ -241,6 +243,8 @@ export const createBankPaymentOrder = async (req, res, next) => {
       "Content-Type": "application/json",
     };
 
+    const foundCoupon = await Coupon.findOne({ code: couponCode });
+
     const neworder = new Order({
       eventId: new mongoose.Types.ObjectId(eventId),
       recommendations: recommendations === "true",
@@ -250,12 +254,14 @@ export const createBankPaymentOrder = async (req, res, next) => {
       customerEmail,
       customerName,
       paymentStatus: true,
+      couponCode,
       customerAddress: {
         city,
         country,
         postalCode,
         addressDescription,
       },
+      couponId: foundCoupon?._id,
       businessId: eventRef?.businessId,
       automatedMailSent: true,
     });
