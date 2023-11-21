@@ -1,8 +1,8 @@
 // Payment configuration
-export const apiKey = "2359480IT540369-Sim";
+export const apiKey = "2359480IT540369";
 export const apiUsername = "Api04Magnamic";
 export const apiPassword = "jLZzdv.q?Q94la0Hi)FLsYCVPLl0R";
-export const sharedSecret = "rrNurxOrwsjyehtIp401utmS0Obvau";
+export const sharedSecret = "m6sQ8XfC1itveaDIeiYQAt4beUcUa6";
 
 // payment urls
 export const callbackUrl = "http://13.38.94.55/api/result-api-callback";
