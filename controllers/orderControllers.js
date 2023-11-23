@@ -624,7 +624,7 @@ export const apiPaymentCallback = async (req, res, next) => {
           vatAmount: totalVatCalculated(),
           business,
           tickets: transformedTickets,
-          currency: currencySymbolGenerator(eventRef?.eventCurrency),
+          currency: currencySymbolGenerator(event?.eventCurrency),
           type: "Free Order - Online",
         });
 
