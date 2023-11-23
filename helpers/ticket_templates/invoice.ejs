@@ -200,10 +200,11 @@
           <td class="row"><%= ticket?.noOfTickets %></td>
           <td class="row">
             <%= ticket?.noOfTickets %> <span style="color: #777">X</span> <%=
-            ticket?.ticketAppearance?.ticketPrice %> $
+            ticket?.ticketAppearance?.ticketPrice %> <%= currency %>
           </td>
           <td class="row">
-            <%= ticket?.noOfTickets * ticket?.ticketAppearance?.ticketPrice %> $
+            <%= currency %> <%= ticket?.noOfTickets *
+            ticket?.ticketAppearance?.ticketPrice %>
           </td>
         </tr>
         <% }); %>
@@ -215,18 +216,21 @@
             <table width="300px" style="float: right">
               <tr>
                 <td><strong>Sub-total:</strong></td>
-                <td style="text-align: right"><%= order?.orderAmount %> $</td>
+                <td style="text-align: right">
+                  <%= order?.orderAmount %> <%= currency %>
+                </td>
               </tr>
               <tr>
                 <td><strong>Tax 8%:</strong></td>
                 <td style="text-align: right">
-                  <%= order?.orderAmount * 0.08 %> $
+                  <%= order?.orderAmount * vatAmount %> <%= currency %>
                 </td>
               </tr>
               <tr>
                 <td><strong>Grand total:</strong></td>
                 <td style="text-align: right">
-                  <%= order?.orderAmount + (order?.orderAmount * 0.08) %> $
+                  <%= order?.orderAmount + (order?.orderAmount * vatAmount) %>
+                  <%= currency %>
                 </td>
               </tr>
             </table>

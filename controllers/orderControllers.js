@@ -21,6 +21,7 @@ import { SendTicketEmail } from "../helpers/sendEmail.js";
 import generateInvoice from "../helpers/generateInvoice.js";
 import Business from "../models/business.js";
 import Coupon from "../models/coupon.js";
+import { currencySymbolGenerator } from "../helpers/helpers.js";
 
 function generateUniqueTransactionId() {
   const timestamp = Date.now();
@@ -123,6 +124,7 @@ export const createFreeOrder = async (req, res, next) => {
         ticketPrice: foundTicket?.price,
         ticketVat: foundTicket?.vat,
         descriptionTicket: foundTicket?.descriptionTicket,
+        currency: currencySymbolGenerator(eventRef?.eventCurrency),
       };
     }
     // console.log(transformedTickets, "transformed tickets");
@@ -134,6 +136,7 @@ export const createFreeOrder = async (req, res, next) => {
     const invoiceResult = await generateInvoice({
       order: neworder,
       business,
+      currency: currencySymbolGenerator(eventRef?.eventCurrency),
       tickets: transformedTickets,
       type: "Free Order - Online",
     });
@@ -176,6 +179,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
     tickets,
     noOfTickets,
     orderAmount,
+    orderVatAmount,
     customerEmail,
     customerName,
     city,
@@ -250,7 +254,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
       recommendations: recommendations === "true",
       tickets: transformedTickets,
       noOfTickets: parseInt(noOfTickets),
-      orderAmount: parseInt(orderAmount),
+      orderAmount: parseFloat(orderAmount),
       customerEmail,
       customerName,
       paymentStatus: true,
@@ -282,7 +286,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
     });
 
     eventRef.ticketsSold += parseInt(noOfTickets);
-    eventRef.revenue += parseInt(orderAmount);
+    eventRef.revenue += parseFloat(orderAmount);
 
     const savedEvent = await eventRef.save();
 
@@ -304,6 +308,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
         ticketPrice: foundTicket?.price,
         ticketVat: foundTicket?.vat,
         descriptionTicket: foundTicket?.descriptionTicket,
+        currency: currencySymbolGenerator(eventRef?.eventCurrency),
       };
     }
     console.log(transformedTickets, "transformed tickets");
@@ -316,15 +321,31 @@ export const createBankPaymentOrder = async (req, res, next) => {
     await Business.findByIdAndUpdate(business?._id, {
       earnings: {
         currentBalance:
-          (business?.earnings?.currentBalance || 0) + parseInt(orderAmount),
+          (business?.earnings?.currentBalance || 0) + parseFloat(orderAmount),
         totalEarnings:
-          (business?.earnings?.totalEarnings || 0) + parseInt(orderAmount),
+          (business?.earnings?.totalEarnings || 0) + parseFloat(orderAmount),
       },
     });
+
+    const totalVatCalculated = () => {
+      let total = 0;
+      transformedTickets?.forEach((ticket) => {
+        if (ticket?.noOfTickets > 0) {
+          for (let i = 0; i < ticket?.noOfTickets; i++) {
+            total += parseFloat(ticket?.ticketAppearance?.ticketVat);
+          }
+        }
+      });
+      console.log(total, "total vat calculated");
+      return total;
+    };
+
     const invoiceResult = await generateInvoice({
       order: neworder,
+      vatAmount: totalVatCalculated(),
       business,
       tickets: transformedTickets,
+      currency: currencySymbolGenerator(eventRef?.eventCurrency),
       type: "Free Order - Online",
     });
 
@@ -366,6 +387,7 @@ export const createCardPaymentOrder = async (req, res, next) => {
       tickets,
       noOfTickets,
       orderAmount,
+      orderVatAmount,
       customerEmail,
       customerName,
       city,
@@ -375,10 +397,12 @@ export const createCardPaymentOrder = async (req, res, next) => {
       countryCode,
     } = req.body;
 
+    const eventRef = await Event.findById(eventId);
+
     const inputBody = {
       merchantTransactionId: generateUniqueTransactionId(),
-      amount: orderAmount,
-      currency: "EUR",
+      amount: `${parseFloat(orderAmount) + parseFloat(orderVatAmount)}`,
+      currency: eventRef?.eventCurrency || "EUR",
       transactionToken: paymentRequestToken,
       callbackUrl: callbackUrl,
       successUrl: successUrl,
@@ -433,7 +457,6 @@ export const createCardPaymentOrder = async (req, res, next) => {
       return res.status(400).send({ message: "Payment declined" });
     }
 
-    const eventRef = await Event.findById(eventId);
     if (!eventRef) {
       return next(new HttpError("Event not found", 404));
     }
@@ -454,7 +477,7 @@ export const createCardPaymentOrder = async (req, res, next) => {
       bankUuid: responseBody?.uuid,
       tickets: transformedTickets,
       noOfTickets: parseInt(noOfTickets),
-      orderAmount: parseInt(orderAmount),
+      orderAmount: parseFloat(orderAmount),
       customerEmail,
       customerName,
       paymentStatus: false,
@@ -483,7 +506,7 @@ export const createCardPaymentOrder = async (req, res, next) => {
     });
 
     eventRef.ticketsSold += parseInt(noOfTickets);
-    eventRef.revenue += parseInt(orderAmount);
+    eventRef.revenue += parseFloat(orderAmount);
 
     const savedEvent = await eventRef.save();
 
@@ -535,10 +558,10 @@ export const apiPaymentCallback = async (req, res, next) => {
         earnings: {
           currentBalance:
             (businessForCalc?.earnings?.currentBalance || 0) +
-            parseInt(orderAmount),
+            parseFloat(orderAmount),
           totalEarnings:
             (businessForCalc?.earnings?.totalEarnings || 0) +
-            parseInt(orderAmount),
+            parseFloat(orderAmount),
         },
       });
 
@@ -570,6 +593,7 @@ export const apiPaymentCallback = async (req, res, next) => {
               ticketPrice: foundTicket?.price,
               ticketVat: foundTicket?.vat,
               descriptionTicket: foundTicket?.descriptionTicket,
+              currency: currencySymbolGenerator(event?.eventCurrency),
             },
           });
         }
@@ -581,10 +605,26 @@ export const apiPaymentCallback = async (req, res, next) => {
         console.log(pdfResult, "pdf result");
 
         const business = await Business.findById(event?.businessId);
+
+        const totalVatCalculated = () => {
+          let total = 0;
+          transformedTickets?.forEach((ticket) => {
+            if (ticket?.noOfTickets > 0) {
+              for (let i = 0; i < ticket?.noOfTickets; i++) {
+                total += parseFloat(ticket?.ticketAppearance?.ticketVat);
+              }
+            }
+          });
+          console.log(total, "total vat calculated");
+          return total;
+        };
+
         const invoiceResult = await generateInvoice({
           order,
+          vatAmount: totalVatCalculated(),
           business,
           tickets: transformedTickets,
+          currency: currencySymbolGenerator(eventRef?.eventCurrency),
           type: "Free Order - Online",
         });
 

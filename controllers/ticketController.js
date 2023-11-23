@@ -92,8 +92,8 @@ export const createNewTicket = async (req, res, next) => {
 
     const newTicket = {
       ticketName,
-      validFrom,
-      validTo,
+      validFrom: new Date(validFrom),
+      validTo: new Date(validTo),
       ticketType,
       maxCapacity:
         capacityLimitation == "true" && parseInt(maxCapacity) > 0
@@ -126,9 +126,9 @@ export const createNewTicket = async (req, res, next) => {
         companyVAT: business?.company?.companyVAT,
         ticketName,
         eventAddress: event.eventAddress,
-        entryTimeWithTicket: event.eventStart,
-        eventStart: event.eventStart,
-        eventEnd: event.eventEnd,
+        entryTimeWithTicket: new Date(event.eventStart),
+        eventStart: new Date(event.eventStart),
+        eventEnd: new Date(event.eventEnd),
       },
     };
 
@@ -197,8 +197,8 @@ export const updateTicket = async (req, res, next) => {
 
     // Update the properties of the existing ticket directly
     event.tickets[ticketIndex].ticketName = ticketName;
-    event.tickets[ticketIndex].validFrom = validFrom;
-    event.tickets[ticketIndex].validTo = validTo;
+    event.tickets[ticketIndex].validFrom = new Date(validFrom);
+    event.tickets[ticketIndex].validTo = new Date(validTo);
     event.tickets[ticketIndex].questions = questions;
     event.tickets[ticketIndex].maxCapacity = calculatedMax;
     event.tickets[ticketIndex].ticketType = ticketType;

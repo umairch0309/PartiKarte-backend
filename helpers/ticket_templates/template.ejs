@@ -168,7 +168,7 @@
           </div>
         </div>
         <div class="box">
-          <p class="label">venue</p>
+          <p class="label">Venue</p>
           <h4 class="text"><%= eventVenue %></h4>
         </div>
         <% if (eventAddress && eventAddress.eventLink) { %>
@@ -208,11 +208,11 @@
           <div class="side-by-side">
             <div class="box">
               <p class="label">price</p>
-              <h4 class="text">$ <%= ticketPrice %></h4>
+              <h4 class="text"><%= currency %> <%= ticketPrice %></h4>
             </div>
             <div class="box">
               <p class="label">vat</p>
-              <h4 class="text">$ <%= ticketVat %></h4>
+              <h4 class="text"><%= currency %> <%= ticketVat %></h4>
             </div>
           </div>
           <div class="box">
