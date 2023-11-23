@@ -184,6 +184,10 @@ const eventSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  eventCurrency: {
+    type: String,
+    required: true,
+  },
   ticketsSold: {
     type: Number,
     default: 0,
