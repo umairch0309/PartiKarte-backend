@@ -558,10 +558,10 @@ export const apiPaymentCallback = async (req, res, next) => {
         earnings: {
           currentBalance:
             (businessForCalc?.earnings?.currentBalance || 0) +
-            parseFloat(orderAmount),
+            parseFloat(order?.orderAmount),
           totalEarnings:
             (businessForCalc?.earnings?.totalEarnings || 0) +
-            parseFloat(orderAmount),
+            parseFloat(order?.orderAmount),
         },
       });
 
