@@ -51,6 +51,20 @@ export function generateRandomCode(length) {
   return code;
 }
 
+export function currencySymbolGenerator(currencyCode) {
+  try {
+    const formatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currencyCode,
+    });
+    const parts = formatter.formatToParts(1);
+    const currencySymbol = parts.find((part) => part.type === "currency").value;
+    return currencySymbol || "€";
+  } catch (error) {
+    return "€";
+  }
+}
+
 export const isImageFile = async (type, next) => {
   const isImage = type?.startsWith("image/");
 

@@ -93,6 +93,7 @@ export const createNewEvent = async (req, res, next) => {
     eventVenue,
     eventDescription,
     eventLink,
+    eventCurrency,
   } = req.body;
 
   const eventBanner = req.files[0];
@@ -136,9 +137,10 @@ export const createNewEvent = async (req, res, next) => {
 
     const newEvent = new Event({
       eventName,
-      eventStart,
-      eventEnd,
+      eventStart: new Date(eventStart),
+      eventEnd: new Date(eventEnd),
       eventType,
+      eventCurrency,
       eventBanner: eventBannerLink,
       eventCategory,
       eventAddress: {
@@ -190,6 +192,7 @@ export const updateEvent = async (req, res, next) => {
     eventVenue,
     eventDescription,
     eventLink,
+    eventCurrency,
   } = req.body;
 
   const [eventBanner] = req.files;
@@ -221,8 +224,8 @@ export const updateEvent = async (req, res, next) => {
 
     const updatedEvent = {
       eventName,
-      ...(eventStart && { eventStart }),
-      ...(eventEnd && { eventEnd }),
+      ...(eventStart && { eventStart: new Date(eventStart) }),
+      ...(eventEnd && { eventEnd: new Date(eventEnd) }),
       eventType,
       ...(eventBannerLink && { eventBanner: eventBannerLink }),
       eventCategory,
@@ -237,6 +240,7 @@ export const updateEvent = async (req, res, next) => {
       ...(eventCoordinatesY && { eventCoordinatesY }),
       eventVenue,
       eventDescription,
+      eventCurrency,
     };
 
     // Update the event in the database
