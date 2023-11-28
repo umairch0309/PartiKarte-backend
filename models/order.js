@@ -27,10 +27,11 @@ const ticketSchema = new mongoose.Schema({
   noOfTickets: {
     type: Number,
   },
-  scannedTickets: {
-    type: Number,
-    default: 0,
-  },
+  scannedTickets: [
+    {
+      type: Number,
+    },
+  ],
   allQuestions: [
     {
       questions: [

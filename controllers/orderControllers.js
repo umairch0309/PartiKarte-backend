@@ -112,8 +112,12 @@ export const createFreeOrder = async (req, res, next) => {
       return res.status(500).send("Server error");
     }
 
-    for (const ticket of transformedTickets) {
-      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${eventRef?._id}&&ticketId=${ticket?.ticketId}`;
+    for (let i = 0; i < transformedTickets.length; i++) {
+      const ticket = transformedTickets[i];
+      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${
+        eventRef?._id
+      }&&ticketId=${ticket?.ticketId}&&id=${i + 1}`;
+
       const foundTicket = eventRef?.tickets.find(
         (t) => t._id?.toString() === ticket?.ticketId
       );
@@ -136,6 +140,7 @@ export const createFreeOrder = async (req, res, next) => {
     const invoiceResult = await generateInvoice({
       order: neworder,
       business,
+      vatAmount: 0,
       currency: currencySymbolGenerator(eventRef?.eventCurrency),
       tickets: transformedTickets,
       type: "Free Order - Online",
@@ -296,8 +301,11 @@ export const createBankPaymentOrder = async (req, res, next) => {
       return res.status(500).send("Server error");
     }
 
-    for (const ticket of transformedTickets) {
-      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${eventRef?._id}&&ticketId=${ticket?.ticketId}`;
+    for (let i = 0; i < transformedTickets.length; i++) {
+      const ticket = transformedTickets[i];
+      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${
+        eventRef?._id
+      }&&ticketId=${ticket?.ticketId}&&id=${i + 1}`;
       const foundTicket = eventRef?.tickets.find(
         (t) => t._id?.toString() === ticket?.ticketId
       );
@@ -342,7 +350,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
 
     const invoiceResult = await generateInvoice({
       order: neworder,
-      vatAmount: totalVatCalculated(),
+      vatAmount: totalVatCalculated() || 0,
       business,
       tickets: transformedTickets,
       currency: currencySymbolGenerator(eventRef?.eventCurrency),
@@ -574,8 +582,12 @@ export const apiPaymentCallback = async (req, res, next) => {
 
         const tickets = order.tickets;
 
-        for (const ticket of tickets) {
-          const qrCodeData = `orderId=${order?._id}&&eventId=${event?._id}&&ticketId=${ticket?.ticketId}`;
+        for (let i = 0; i < tickets.length; i++) {
+          const ticket = tickets[i];
+          const qrCodeData = `orderId=${order?._id}&&eventId=${
+            event?._id
+          }&&ticketId=${ticket?.ticketId}&&id=${i + 1}`;
+
           const foundTicket = event?.tickets.find(
             (t) => t._id?.toString() === ticket?.ticketId?.toString()
           );
@@ -621,7 +633,7 @@ export const apiPaymentCallback = async (req, res, next) => {
 
         const invoiceResult = await generateInvoice({
           order,
-          vatAmount: totalVatCalculated(),
+          vatAmount: totalVatCalculated() || 0,
           business,
           tickets: transformedTickets,
           currency: currencySymbolGenerator(event?.eventCurrency),
