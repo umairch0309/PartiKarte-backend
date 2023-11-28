@@ -20,12 +20,13 @@ router.post(
       const { firstName, lastName, email, object, description, phoneNumber } =
         req.body;
 
-      const attachments = req.files.map((file) => ({
-        content: file.buffer.toString("base64"),
-        filename: file.originalname,
-        type: file.mimetype,
-        disposition: "attachment",
-      }));
+      const attachments =
+        req?.files?.map((file) => ({
+          content: file.buffer.toString("base64"),
+          filename: file.originalname,
+          type: file.mimetype,
+          disposition: "attachment",
+        })) || [];
 
       const uploadedFiles = [];
 
