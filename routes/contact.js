@@ -30,11 +30,13 @@ router.post(
 
       const uploadedFiles = [];
 
-      for (const file of files) {
-        const uploadedImage = await uploadS3Image(file, "contact_us/", next);
+      if (files?.length > 0) {
+        for (const file of files) {
+          const uploadedImage = await uploadS3Image(file, "contact_us/", next);
 
-        if (uploadedImage.uploadedImagePath && uploadedImage.status) {
-          uploadedFiles.push(uploadedImage.uploadedImagePath);
+          if (uploadedImage.uploadedImagePath && uploadedImage.status) {
+            uploadedFiles.push(uploadedImage.uploadedImagePath);
+          }
         }
       }
 
