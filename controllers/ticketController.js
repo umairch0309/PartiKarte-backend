@@ -84,9 +84,9 @@ export const createNewTicket = async (req, res, next) => {
     if (!event) {
       return next(new HttpError("Event not found", 404));
     }
-
+    console.log(paidTicket ? parseFloat(price) : 0, "ticket price ");
     const { vat, priceWithVAT } = calculatePriceWithVAT(
-      paidTicket == "true" && parseFloat(price) > 0 ? parseFloat(price) : 0,
+      paidTicket ? parseFloat(price) : 0,
       vatPercentage
     );
 
@@ -95,28 +95,17 @@ export const createNewTicket = async (req, res, next) => {
       validFrom: new Date(validFrom),
       validTo: new Date(validTo),
       ticketType,
-      maxCapacity:
-        capacityLimitation == "true" && parseInt(maxCapacity) > 0
-          ? parseInt(maxCapacity)
-          : 999999999,
-      capacityLimitation:
-        capacityLimitation == "true" && parseInt(maxCapacity) > 0
-          ? "limited"
-          : "unlimited",
-      paymentType:
-        paidTicket == "true" && parseFloat(price) > 0 ? "paid" : "free",
-      price:
-        paidTicket == "true" && parseFloat(price) > 0 ? parseFloat(price) : 0,
+      maxCapacity: capacityLimitation ? parseInt(maxCapacity) : 999999999,
+      capacityLimitation: capacityLimitation ? "limited" : "unlimited",
+      paymentType: paidTicket ? "paid" : "free",
+      price: paidTicket ? parseFloat(price) : 0,
       vatPercentage,
       vat,
       priceWithVAT,
       questions,
       descriptionWeb,
       descriptionTicket,
-      remainingCapacity:
-        capacityLimitation == "true" && parseInt(maxCapacity) > 0
-          ? parseInt(maxCapacity)
-          : 999999999,
+      remainingCapacity: capacityLimitation ? parseInt(maxCapacity) : 999999999,
       ticketAppearance: {
         logo: business?.organizerImage,
         organizerName: business?.company?.companyName,

@@ -139,7 +139,6 @@ export const scanEventInApp = async (req, res, next) => {
 
   try {
     const order = await Order.findById(orderId);
-
     if (!order) {
       return next(new HttpError("Invalid", 400));
     }
@@ -154,8 +153,12 @@ export const scanEventInApp = async (req, res, next) => {
       return next(new HttpError("Invalid", 400));
     }
 
-    if (ticket.scannedTickets.include(parseInt(id))) {
+    console.log(ticket, "ticket.scannedTickets");
+
+    if (ticket.scannedTickets.includes(parseInt(id))) {
       return next(new HttpError("Exists", 400));
+    } else if (parseInt(id) > ticket.noOfTickets || parseInt(id) < 1) {
+      return next(new HttpError("Invalid", 400));
     } else {
       ticket.scannedTickets = [...ticket.scannedTickets, parseInt(id)];
       await order.save();
