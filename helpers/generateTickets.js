@@ -30,7 +30,9 @@ const generateTickets = async (tickets) => {
       console.log(ticket?.noOfTickets, "ticket number ");
 
       for (let i = 0; i < ticket?.noOfTickets; i++) {
-        const qrCode = await generateQRCodeData(ticket?.qrCodeData);
+        const qrCodeDataString = `${ticket?.qrCodeData}${i + 1}`;
+        console.log(qrCodeDataString, "qrCodeDataString");
+        const qrCode = await generateQRCodeData(qrCodeDataString);
 
         const html = await ejs.renderFile(
           __dirname + `/ticket_templates/template.ejs`,

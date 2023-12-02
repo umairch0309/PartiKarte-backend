@@ -65,7 +65,7 @@ const ticketSchema = new mongoose.Schema({
   },
   vatPercentage: {
     type: Number,
-    required: true,
+    default: 0,
   },
   vat: {
     type: Number,

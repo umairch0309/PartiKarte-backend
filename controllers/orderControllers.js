@@ -109,18 +109,19 @@ export const createFreeOrder = async (req, res, next) => {
     if (savedEvent) {
       await neworder.save();
     } else {
-      return res.status(500).send("Server error");
+      return res.status(500).send({ message: "Server error" });
     }
 
     for (let i = 0; i < transformedTickets.length; i++) {
       const ticket = transformedTickets[i];
-      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${
-        eventRef?._id
-      }&&ticketId=${ticket?.ticketId}&&id=${i + 1}`;
+      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${eventRef?._id}&&ticketId=${ticket?.ticketId}&&id=`;
 
       const foundTicket = eventRef?.tickets.find(
         (t) => t._id?.toString() === ticket?.ticketId
       );
+
+      console.log(ticket?.qrCodeData, "qr code data");
+
       ticket.ticketAppearance = {
         ...foundTicket?.ticketAppearance,
         eventName: eventRef?.eventName,
@@ -131,7 +132,7 @@ export const createFreeOrder = async (req, res, next) => {
         currency: currencySymbolGenerator(eventRef?.eventCurrency),
       };
     }
-    // console.log(transformedTickets, "transformed tickets");
+    console.log(transformedTickets, "transformed tickets");
 
     const pdfResult = await generateTickets(transformedTickets);
     console.log(pdfResult, "pdf result");
@@ -173,7 +174,7 @@ export const createFreeOrder = async (req, res, next) => {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).send("Server error");
+    return res.status(500).send({ message: "Server error" });
   }
 };
 
@@ -298,14 +299,12 @@ export const createBankPaymentOrder = async (req, res, next) => {
     if (savedEvent) {
       await neworder.save();
     } else {
-      return res.status(500).send("Server error");
+      return res.status(500).send({ message: "Server error" });
     }
 
     for (let i = 0; i < transformedTickets.length; i++) {
       const ticket = transformedTickets[i];
-      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${
-        eventRef?._id
-      }&&ticketId=${ticket?.ticketId}&&id=${i + 1}`;
+      ticket.qrCodeData = `orderId=${neworder?._id}&&eventId=${eventRef?._id}&&ticketId=${ticket?.ticketId}&&id=`;
       const foundTicket = eventRef?.tickets.find(
         (t) => t._id?.toString() === ticket?.ticketId
       );
@@ -382,7 +381,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
     res.status(201).send({ message: "Order has been saved successfully." });
   } catch (error) {
     console.error(error);
-    return res.status(500).send("Server error");
+    return res.status(500).send({ message: "Server error" });
   }
 };
 
@@ -521,7 +520,7 @@ export const createCardPaymentOrder = async (req, res, next) => {
     if (savedEvent) {
       await neworder.save();
     } else {
-      return res.status(500).send("Server error");
+      return res.status(500).send({ message: "Server error" });
     }
 
     if (
@@ -584,15 +583,11 @@ export const apiPaymentCallback = async (req, res, next) => {
 
         for (let i = 0; i < tickets.length; i++) {
           const ticket = tickets[i];
-          const qrCodeData = `orderId=${order?._id}&&eventId=${
-            event?._id
-          }&&ticketId=${ticket?.ticketId}&&id=${i + 1}`;
+          const qrCodeData = `orderId=${order?._id}&&eventId=${event?._id}&&ticketId=${ticket?.ticketId}&&id=`;
 
           const foundTicket = event?.tickets.find(
             (t) => t._id?.toString() === ticket?.ticketId?.toString()
           );
-
-          console.log(foundTicket, "found ticket", ticket, "ticket");
 
           transformedTickets.push({
             ticketId: ticket.ticketId,
@@ -609,8 +604,6 @@ export const apiPaymentCallback = async (req, res, next) => {
             },
           });
         }
-
-        console.log(transformedTickets, "transformed tickets");
 
         const pdfResult = await generateTickets(transformedTickets);
 
