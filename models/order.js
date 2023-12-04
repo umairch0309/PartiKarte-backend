@@ -29,7 +29,12 @@ const ticketSchema = new mongoose.Schema({
   },
   scannedTickets: [
     {
-      type: Number,
+      id: { type: Number },
+      scannedAt: { type: Date },
+      scannedBy: {
+        type: mongoose.Types.ObjectId,
+        ref: "User",
+      },
     },
   ],
   allQuestions: [

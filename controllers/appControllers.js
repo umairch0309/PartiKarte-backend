@@ -135,6 +135,7 @@ export const getEventInApp = async (req, res, next) => {
 
 // scan event in app
 export const scanEventInApp = async (req, res, next) => {
+  const userId = req?.userId;
   const { eventId, orderId, ticketId, id } = req.query;
 
   try {
@@ -155,12 +156,15 @@ export const scanEventInApp = async (req, res, next) => {
 
     console.log(ticket, "ticket.scannedTickets");
 
-    if (ticket.scannedTickets.includes(parseInt(id))) {
+    if (ticket.scannedTickets.find((el) => el?.id === parseInt(id))?.id) {
       return next(new HttpError("Exists", 400));
     } else if (parseInt(id) > ticket.noOfTickets || parseInt(id) < 1) {
       return next(new HttpError("Invalid", 400));
     } else {
-      ticket.scannedTickets = [...ticket.scannedTickets, parseInt(id)];
+      ticket.scannedTickets = [
+        ...ticket.scannedTickets,
+        { id: parseInt(id), scannedAt: new Date(), scannedBy: userId },
+      ];
       await order.save();
       event.scannedTickets += 1;
       await event.save();
@@ -179,6 +183,7 @@ export const getAllGuestsInApp = async (req, res) => {
   try {
     if (eventId && eventId !== "undefined") {
       const guests = await Guest.find({ eventId }).sort({ _id: -1 });
+
       return res.status(200).json({ guests });
     }
     return res.status(404).json({ message: "Not found" });
