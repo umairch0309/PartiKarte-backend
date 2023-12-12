@@ -257,7 +257,7 @@ export const updatePassword = async (req, res, next) => {
     }
 
     await SendPasswordChangedEmail({
-      email,
+      email: user?.email,
     });
 
     res.status(200).json({ message: "Password updated" });

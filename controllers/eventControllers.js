@@ -25,9 +25,37 @@ export const getAllEvents = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    const events = await Event.find({ businessId: business?._id }).sort({
-      _id: -1,
-    });
+    const events = await Event.aggregate([
+      {
+        $match: {
+          businessId: business?._id,
+        },
+      },
+      {
+        $lookup: {
+          from: "guests", // Replace with the actual collection name for guests
+          localField: "_id",
+          foreignField: "eventId",
+          as: "guests",
+        },
+      },
+      {
+        $addFields: {
+          totalGuests: { $size: "$guests" }, // Count total guests for each event
+          totalScannedGuests: {
+            $sum: { $cond: [{ $eq: ["$guests.isPresent", false] }, 1, 0] },
+          }, // Count scanned guests for each event
+        },
+      },
+      {
+        $project: {
+          guests: 0, // Exclude the guests array from the final result
+        },
+      },
+      {
+        $sort: { _id: -1 },
+      },
+    ]);
 
     res.status(200).json({ events });
   } catch (error) {
