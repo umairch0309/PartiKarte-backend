@@ -724,24 +724,25 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    if (!eventId || eventId === "undefined") {
-      return next(new HttpError("Invalid Id", 404));
-    }
-
     if (interval === "monthly") {
       const endDate = new Date(); // Today's date
-      const startDate = new Date();
+      startDate = new Date();
       startDate.setDate(startDate.getDate() - 30); // 30 days ago from today
 
-      console.log(eventId, "eventId");
-
-      const foundOrders = await Order.find({
+      const query = {
         paymentStatus: true,
         businessId: business?._id,
-        ...(eventId && { eventId }),
         updatedAt: { $gte: startDate },
         updatedAt: { $lte: endDate },
-      }).select("updatedAt orderAmount");
+      };
+
+      if (eventId && eventId !== "undefined") {
+        query.eventId = eventId;
+      }
+
+      const foundOrders = await Order.find(query).select(
+        "updatedAt orderAmount"
+      );
 
       const aggregatedOrders = {}; // Object to store aggregated order amounts by day
 
@@ -782,15 +783,22 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
       ];
 
       const endDate = new Date(); // Today's date
-      const startDate = new Date();
+      startDate = new Date();
       startDate.setMonth(startDate.getMonth() - 11); // 12 months ago from today
 
-      const foundOrders = await Order.find({
+      const query = {
         businessId: business?._id,
         paymentStatus: true,
-        ...(eventId && { eventId }),
         updatedAt: { $gte: startDate, $lte: endDate },
-      }).select("updatedAt orderAmount");
+      };
+
+      if (eventId && eventId !== "undefined") {
+        query.eventId = eventId;
+      }
+
+      const foundOrders = await Order.find(query).select(
+        "updatedAt orderAmount"
+      );
 
       const aggregatedOrders = {}; // Object to store aggregated order amounts by month
 
@@ -826,17 +834,22 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
       );
     } else if (interval === "weekly") {
       const endDate = new Date(); // Today's date
-      const startDate = new Date();
+      startDate = new Date();
       startDate.setDate(startDate.getDate() - 7); // 7 days ago from today
 
-      // You can replace 'yourEventId' with the actual event ID you want to filter by
-
-      const foundOrders = await Order.find({
+      const query = {
         businessId: business?._id,
         paymentStatus: true,
-        ...(eventId && { eventId }),
         updatedAt: { $gte: startDate, $lte: endDate },
-      }).select("updatedAt orderAmount");
+      };
+
+      if (eventId && eventId !== "undefined") {
+        query.eventId = eventId;
+      }
+
+      const foundOrders = await Order.find(query).select(
+        "updatedAt orderAmount"
+      );
 
       const aggregatedOrders = {}; // Object to store aggregated order amounts by day
 
@@ -860,9 +873,56 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
           orderAmount,
         })
       );
+    } else if (interval === "daily") {
+      startDate = new Date();
+      const endDate = new Date(startDate); // Current date
+
+      startDate.setHours(0, 0, 0, 0); // Set start time to midnight of the current day
+      endDate.setDate(endDate.getDate() + 1);
+
+      // Set end time to midnight of the next day
+      endDate.setHours(0, 0, 0, 0);
+
+      const query = {
+        businessId: business?._id,
+        paymentStatus: true,
+        updatedAt: { $gte: startDate, $lte: endDate },
+      };
+
+      if (eventId && eventId !== "undefined") {
+        query.eventId = eventId;
+      }
+
+      const foundOrders = await Order.find(query).select(
+        "updatedAt orderAmount"
+      );
+
+      const aggregatedOrders = {}; // Object to store aggregated order amounts by hour
+
+      // Initialize the aggregatedOrders object with 0 for each hour within the date range
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const hourKey = currentDate.toISOString(); // Format: YYYY-MM-DDTHH
+        aggregatedOrders[hourKey] = 0;
+        currentDate.setHours(currentDate.getHours() + 1);
+      }
+
+      // Update aggregated order amounts based on the fetched orders
+      foundOrders.forEach((order) => {
+        const hourKey = order.updatedAt.toISOString(); // Format: YYYY-MM-DDTHH
+        aggregatedOrders[hourKey] += order.orderAmount;
+      });
+
+      orders = Object.entries(aggregatedOrders).map(
+        ([updatedAt, orderAmount]) => ({
+          updatedAt,
+          orderAmount,
+        })
+      );
     } else {
       return res.status(400).json({ message: "Invalid interval" });
     }
+
     res.status(200).json({ message: "Orders by interval", orders });
   } catch (error) {
     console.error(error);

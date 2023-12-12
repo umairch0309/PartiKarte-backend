@@ -13,7 +13,11 @@ export const createGuest = async (req, res) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    const newGuest = new Guest({ ...req.body, businessId: business?._id });
+    const newGuest = new Guest({
+      ...req.body,
+      businessId: business?._id,
+      addedBy: userId,
+    });
     await newGuest.save();
 
     const event = await Event.findById(req.body.eventId);
@@ -43,7 +47,7 @@ export const getAllGuests = async (req, res) => {
   try {
     if (eventId && eventId !== "undefined") {
       const guests = await Guest.find({ eventId, businessId: business?._id })
-        .populate("addedBy")
+        .populate("addedBy", "role _id email username")
         .sort({ _id: -1 });
       return res.status(200).json({ guests });
     }
