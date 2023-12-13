@@ -98,9 +98,8 @@ const businessUserSchema = new mongoose.Schema(
     },
     company: {
       companyVAT: {
-        type: Number,
+        type: String,
         unique: true,
-        sparse: true,
       },
       companyName: {
         type: String,
@@ -108,9 +107,8 @@ const businessUserSchema = new mongoose.Schema(
       },
       companyAddress: addressSchema,
       companyRegistryNumber: {
-        type: Number,
+        type: String,
         unique: true,
-        sparse: true,
       },
     },
     businessManagers: [

@@ -13,7 +13,7 @@ const newsSchema = new mongoose.Schema({
   },
   date: {
     type: Date,
-    default: Date.now,
+    default: new Date(),
   },
   businessId: {
     type: mongoose.Schema.Types.ObjectId,
