@@ -293,7 +293,7 @@ export const createGallery = async (req, res, next) => {
 
   const { files, userId } = req;
   const { galleryName, event, date } = req.body;
-
+  const isNoEvent = event === "no-specific-event";
   try {
     if (!galleryName || !event || !date) {
       return res
@@ -308,7 +308,7 @@ export const createGallery = async (req, res, next) => {
       return next(new HttpError("Invalid Id", 404));
     }
 
-    const eventRef = await Event.findById(event);
+    const eventRef = isNoEvent ? true : await Event.findById(event);
     if (!eventRef) {
       return next(new HttpError("Event not found", 404));
     }
@@ -327,7 +327,7 @@ export const createGallery = async (req, res, next) => {
 
     const newGallery = {
       name: galleryName,
-      event: eventRef._id,
+      event: isNoEvent ? null : eventRef._id,
       startingDate: date,
       images,
     };
@@ -354,6 +354,7 @@ export const updateGallery = async (req, res, next) => {
   const { files, userId } = req;
   const { galleryId } = req.params;
   const { galleryName, event, date, images } = req.body;
+  const isNoEvent = event === "no-specific-event";
 
   try {
     if (!galleryName || !event || !date) {
@@ -370,7 +371,7 @@ export const updateGallery = async (req, res, next) => {
       return next(new HttpError("Invalid Id", 404));
     }
 
-    const eventRef = await Event.findById(event);
+    const eventRef = isNoEvent ? true : await Event.findById(event);
     if (!eventRef) {
       return next(new HttpError("Event not found", 404));
     }
@@ -396,7 +397,7 @@ export const updateGallery = async (req, res, next) => {
     }
 
     gallery.name = galleryName;
-    gallery.event = event;
+    gallery.event = isNoEvent ? null : event;
     gallery.startingDate = date;
     gallery.images = newImages;
     const savedBusiness = await myBusiness.save();

@@ -35,6 +35,8 @@ export const createNews = async (req, res, next) => {
   const { files, userId } = req;
   const { name, eventId, date, description } = req.body;
 
+  const isNoEvent = eventId === "no-specific-event";
+
   try {
     if (!name || !eventId || !date || !description) {
       return res.status(400).json({ error: "News details are not completed" });
@@ -47,7 +49,7 @@ export const createNews = async (req, res, next) => {
       return next(new HttpError("Invalid Id", 404));
     }
 
-    const eventRef = await Event.findById(eventId);
+    const eventRef = isNoEvent ? true : await Event.findById(eventId);
     if (!eventRef) {
       return next(new HttpError("Event not found", 404));
     }
@@ -63,13 +65,11 @@ export const createNews = async (req, res, next) => {
           images.push(uploadedImage.uploadedImagePath);
         }
       }
-    } else {
-      return next(new HttpError("No image found", 404));
     }
 
     const newNews = new News({
       name,
-      eventId: eventRef._id,
+      eventId: isNoEvent ? null : eventRef._id,
       date,
       images,
       businessId: business._id,
@@ -77,14 +77,14 @@ export const createNews = async (req, res, next) => {
     });
 
     myBusiness.news.push(newNews._id);
-    eventRef.news.push(newNews._id);
+    if (!isNoEvent) eventRef.news.push(newNews._id);
     const savedNews = await newNews.save();
 
     if (!savedNews) {
       return next(new HttpError("Couldn't save news", 404));
     } else {
       await myBusiness.save();
-      await eventRef.save();
+      if (!isNoEvent) await eventRef.save();
     }
 
     res
@@ -102,6 +102,8 @@ export const updateNews = async (req, res, next) => {
   req.body.images = req.body.images || [];
   const { name, eventId, date, description } = req.body;
 
+  const isNoEvent = eventId === "no-specific-event";
+
   try {
     if (!name || !eventId || !date || !description) {
       return res.status(400).json({ error: "News details are not completed" });
@@ -113,7 +115,7 @@ export const updateNews = async (req, res, next) => {
       return next(new HttpError("Invalid Id", 404));
     }
 
-    const eventRef = await Event.findById(eventId);
+    const eventRef = isNoEvent ? true : await Event.findById(eventId);
     if (!eventRef) {
       return next(new HttpError("Event not found", 404));
     }
@@ -123,7 +125,7 @@ export const updateNews = async (req, res, next) => {
       return next(new HttpError("News not found", 404));
     }
 
-    if (existingNews.eventId !== eventRef._id) {
+    if (existingNews.eventId !== eventRef?._id && !isNoEvent) {
       const existingEventRef = await Event.findById(existingNews.eventId);
       existingEventRef.news = existingEventRef.news.filter(
         (news) => news !== existingNews._id
@@ -150,8 +152,8 @@ export const updateNews = async (req, res, next) => {
 
     // Update the news document
     existingNews.name = name;
-    if (existingNews.eventId !== eventRef._id)
-      existingNews.eventId = eventRef._id;
+    if (existingNews.eventId !== eventRef?._id && !isNoEvent)
+      existingNews.eventId = eventRef?._id;
     existingNews.date = date;
     existingNews.images = images;
     existingNews.description = description;
@@ -160,7 +162,8 @@ export const updateNews = async (req, res, next) => {
     if (!savedNews) {
       return next(new HttpError("Couldn't save news", 404));
     } else {
-      if (existingNews.eventId !== eventRef._id) await eventRef.save();
+      if (existingNews.eventId !== eventRef?._id && !isNoEvent)
+        await eventRef.save();
     }
 
     res

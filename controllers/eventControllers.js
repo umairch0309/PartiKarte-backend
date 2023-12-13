@@ -76,8 +76,7 @@ export const getActiveEvents = async (req, res, next) => {
 
     const events = await Event.find({
       businessId: business?._id,
-      eventStart: { $lte: currentDate }, // Check if eventStart is less than or equal to currentDate
-      eventEnd: { $gte: currentDate }, // Check if eventEnd is greater than or equal to currentDate
+      eventStart: { $gte: currentDate },
     });
 
     res.status(200).json({ events });

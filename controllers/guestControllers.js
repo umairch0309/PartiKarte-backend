@@ -2,6 +2,7 @@ import { findBusinessAndUser } from "../DAL/common.js";
 import Guest from "../models/guest.js";
 import { SendGuestAddition } from "../helpers/sendEmail.js";
 import Event from "../models/event.js";
+import HttpError from "../helpers/HttpError.js";
 
 // Create a new guest
 export const createGuest = async (req, res) => {
@@ -34,6 +35,46 @@ export const createGuest = async (req, res) => {
   }
 };
 
+// Creating Multiple Guests
+export const createMultipleGuests = async (req, res, next) => {
+  const { userId } = req;
+
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const { guests, eventId } = req.body;
+
+    // Validate if eventId exists and is valid
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return next(new HttpError("Invalid eventId", 400));
+    }
+
+    const guestsToSave = guests.map((guest) => ({
+      ...guest,
+      eventId: event?._id,
+      businessId: business._id,
+      addedBy: userId,
+      isNotified: true,
+    }));
+
+    await Guest.insertMany(guestsToSave);
+
+    await SendGuestAddition({
+      email: guestsToSave.map((guest) => guest.email),
+      event: event?.eventName,
+      company: business?.company?.companyName,
+    });
+    return res.status(201).json({ message: "Guests added successfully" });
+  } catch (error) {
+    console.log(error, "error creating multiple guests");
+    return res.status(500).json({ message: "Failed to create guests." });
+  }
+};
+
 // Get all guests
 export const getAllGuests = async (req, res) => {
   const { userId } = req;
@@ -51,6 +92,52 @@ export const getAllGuests = async (req, res) => {
         .sort({ _id: -1 });
       return res.status(200).json({ guests });
     }
+    return res.status(404).json({ message: "Not found" });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch guests." });
+  }
+};
+
+// Get guests summary by event
+export const getGuestsSummaryByEvent = async (req, res, next) => {
+  const { userId } = req;
+
+  const { user, business } = await findBusinessAndUser({ _id: userId });
+  if (!user || !business) {
+    return next(new HttpError("Invalid id", 400));
+  }
+
+  const { eventId } = req.params;
+
+  try {
+    if (eventId && eventId !== "undefined") {
+      const guests = await Guest.find({
+        eventId,
+        businessId: business?._id,
+      });
+
+      const guestTypeSummary = guests.reduce((summary, guest) => {
+        const { guestType, isPresent } = guest;
+        summary[guestType] = summary[guestType] || {
+          totalGuests: 0,
+          totalPresentGuests: 0,
+        };
+        summary[guestType].totalGuests += 1;
+        summary[guestType].totalPresentGuests += isPresent ? 1 : 0;
+        return summary;
+      }, {});
+
+      const resultArray = Object.entries(guestTypeSummary).map(
+        ([guestType, stats]) => ({
+          guestType,
+          totalGuests: stats.totalGuests,
+          totalPresentGuests: stats.totalPresentGuests,
+        })
+      );
+
+      return res.status(200).json({ guestTypeSummary: resultArray });
+    }
+
     return res.status(404).json({ message: "Not found" });
   } catch (error) {
     return res.status(500).json({ error: "Failed to fetch guests." });
