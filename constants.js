@@ -5,13 +5,13 @@ export const apiPassword = "jLZzdv.q?Q94la0Hi)FLsYCVPLl0R";
 export const sharedSecret = "rrNurxOrwsjyehtIp401utmS0Obvau";
 
 // payment urls
-export const callbackUrl = "http://13.38.94.55/api/result-api-callback";
-export const successUrl = "http://13.38.94.55/checkout/payment-success";
-export const errorUrl = "http://13.38.94.55/checkout/payment-error";
-export const cancelUrl = "http://13.38.94.55/checkout/payment-error";
+export const callbackUrl = "http://3.136.18.99/api/result-api-callback";
+export const successUrl = "http://3.136.18.99/checkout/payment-success";
+export const errorUrl = "http://3.136.18.99/checkout/payment-error";
+export const cancelUrl = "http://3.136.18.99/checkout/payment-error";
 
 // Bank Transfer urls
-export const psuIpAddress = "http://13.38.94.55";
+export const psuIpAddress = "http://3.136.18.99";
 
 // ssl payment usls
 // export const callbackUrl = "https://partikarte.si/api/result-api-callback";
