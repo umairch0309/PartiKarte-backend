@@ -37,13 +37,28 @@ app.use(cors());
 
 app.use("/api/", router);
 
+// SERVING ADMIN BUILD
+const adminBuildPath = path.join(__dirname, "admin-build");
+
+app.use(express.static(adminBuildPath));
+
+app.use("/admin", express.static(path.join(__dirname, "admin-build")));
+
+app.get("/admin/*", (req, res) => {
+  res.sendFile(path.join(adminBuildPath, "index.html"), function (err) {
+    if (err) {
+      res.status(500).send(err);
+      console.log("Error serving file");
+    }
+  });
+});
+
+//SERVING CLIENT BUILDS
+
 const buildPath = path.join(__dirname, "build");
-
 app.use(express.static(buildPath));
-
 app.use("/", express.static(path.join(__dirname, "build")));
-
-app.get("*", (req, res) => {
+app.get("/*", (req, res) => {
   res.sendFile(path.join(buildPath, "index.html"), function (err) {
     if (err) {
       res.status(500).send(err);
