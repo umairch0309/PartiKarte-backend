@@ -12,6 +12,7 @@ import { transactions } from "./transactions.js";
 import { coupons } from "./coupon.js";
 import { roles } from "./roles.js";
 import { app } from "./app.routes.js";
+import { admin } from "./admin.routes.js";
 const router = Router();
 
 router.use("/business", business);
@@ -27,4 +28,6 @@ router.use("/", tickets);
 router.use("/", guests);
 router.use("/", contact);
 router.use("/documents", documents);
+router.use("/admin", admin);
+
 export default router;
