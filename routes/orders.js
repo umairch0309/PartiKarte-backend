@@ -19,7 +19,6 @@ router.post("/create-bank-payment-order", createBankPaymentOrder);
 router.post("/create-card-payment-order", createCardPaymentOrder);
 router.post("/result-api-callback", apiPaymentCallback);
 
-// admin side orders apis
 router.get("/orders/latest-orders", verifyToken, getLatestOrders);
 router.get("/orders/:eventId", verifyToken, getAllOrdersByEvent);
 router.get("/orders/by-time/:interval", verifyToken, getOrdersByTimeInterval);
