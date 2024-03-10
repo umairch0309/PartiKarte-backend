@@ -255,14 +255,16 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
 export const getAllOrdersByBusiness = async (req, res, next) => {
   const { businessId } = req.params;
   try {
-    if (!businessId || businessId === "undefined") {
-      return next(new HttpError("Invalid Id", 404));
+    const latestOrdersQuery = {
+      paymentStatus: true, // Always include paymentStatus: true in the query
+    };
+
+    // Include businessId in the query only if it's provided and not equal to 'undefined'
+    if (businessId && businessId !== "undefined") {
+      latestOrdersQuery.businessId = businessId;
     }
 
-    const latestOrders = await Order.find({
-      businessId,
-      paymentStatus: true,
-    })
+    const latestOrders = await Order.find(latestOrdersQuery)
       .sort({ _id: -1 })
       .populate("businessId")
       .exec();
@@ -294,6 +296,7 @@ export const getBusinessRevenueByMonth = async (req, res, next) => {
       },
       {
         $group: {
+          _id: null,
           totalOrders: { $sum: 1 },
           totalTicketsSold: { $sum: "$noOfTickets" },
           totalRevenue: { $sum: "$orderAmount" },
@@ -303,7 +306,7 @@ export const getBusinessRevenueByMonth = async (req, res, next) => {
 
     res.status(200).json({ message: "revenue data", data });
   } catch (error) {
-    console.error(error);
+    console.error(month, error);
     res.status(500).json({ message: "Server error" });
   }
 };

@@ -189,7 +189,7 @@ export const authenticate = async (req, res, next) => {
  * need to be merged 1
  */
 export const updatePassword = async (req, res, next) => {
-  const userId = req.userId;
+  const userId = req.adminId;
   const { newPassword, password } = req.body;
 
   try {
@@ -376,7 +376,7 @@ export const resetPassword = async (req, res, next) => {
 };
 
 export const profileDetails = async (req, res, next) => {
-  const userId = req.userId;
+  const userId = req.adminId;
 
   console.log(userId);
 
@@ -405,7 +405,7 @@ export const profileDetails = async (req, res, next) => {
 };
 
 export const changeProfileDetails = async (req, res, next) => {
-  const userId = req.userId;
+  const userId = req.adminId;
   const { username } = req.body;
   let uploadedImage;
 

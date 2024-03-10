@@ -13,6 +13,7 @@ import { coupons } from "./coupon.js";
 import { roles } from "./roles.js";
 import { app } from "./app.routes.js";
 import { admin } from "./admin.routes.js";
+
 const router = Router();
 
 router.use("/business", business);

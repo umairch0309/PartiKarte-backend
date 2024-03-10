@@ -38,17 +38,15 @@ app.use(cors());
 app.use("/api/", router);
 
 // SERVING ADMIN BUILD
-app.use("/admin", express.static(path.join(__dirname, "admin-build")));
+app.use("/admin", express.static(path.join(__dirname, "./client/admin")));
 app.get("/admin/*", (req, res) => {
-  console.log(path.join(__dirname, "admin-build"));
-  res.sendFile(path.resolve(__dirname, "admin-build/index.html"));
+  console.log(path.join(__dirname, "client/admin"));
+  res.sendFile(path.resolve(__dirname, "client/admin/index.html"));
 });
 
-//SERVING CLIENT BUILDS
-app.use("/", express.static(path.join(__dirname, "build")));
+app.use("/", express.static(path.join(__dirname, "client/business")));
 app.get("/*", (req, res) => {
-  console.log(path.join(__dirname, "build"));
-  res.sendFile(path.resolve(__dirname, "build/index.html"));
+  res.sendFile(path.resolve(__dirname, "client/business/index.html"));
 });
 
 app.use((req, res, next) => {

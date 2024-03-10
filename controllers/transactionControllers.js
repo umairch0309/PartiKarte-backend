@@ -28,3 +28,22 @@ export const getAllBusinessTransctions = async (req, res, next) => {
     res.status(500).send("Server error");
   }
 };
+
+export const getAllTransctions = async (req, res, next) => {
+  try {
+    const existingTransactions = await Transaction.find({}).populate(
+      "businessId",
+      "company _id contactInformation"
+    );
+    if (!existingTransactions) {
+      return next(new HttpError("Couldn't find transactions", 404));
+    }
+
+    res
+      .status(200)
+      .send({ message: "Transactions!", transactions: existingTransactions });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
+  }
+};

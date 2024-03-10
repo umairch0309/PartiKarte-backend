@@ -29,6 +29,17 @@ import {
   getOrdersByTimeInterval,
 } from "../controllers/admin/orders.js";
 
+import { business } from "./admin/business.js";
+import { events } from "./admin/events.js";
+import { tickets } from "./admin/tickets.js";
+import { contact } from "./admin/contact.js";
+import { news } from "./admin/news.js";
+import { orders } from "./admin/orders.js";
+import { guests } from "./admin/guests.js";
+import { transactions } from "./admin/transactions.js";
+import { coupons } from "./admin/coupon.js";
+import { roles } from "./admin/roles.js";
+
 const mainRouter = express.Router();
 
 // AUTH ROUTES
@@ -45,30 +56,34 @@ AuthRouter.put("/update-profile", verifyAdminToken, changeProfileDetails);
 // BUSINESS ROUTES
 const BusinessRouter = express.Router();
 BusinessRouter.get("/businesses", getAllBusinesses);
-BusinessRouter.get("/business/:businessId", getSingleBusinesses);
+BusinessRouter.get("/business/:businessId/get-single", getSingleBusinesses);
 
 // EVENTS ROUTES
 const EventsRouter = express.Router();
-EventsRouter.get("/events", verifyAdminToken, getAllEvents);
-EventsRouter.get("/events/active", verifyAdminToken, getActiveEvents);
-EventsRouter.get("/events/:eventId", verifyAdminToken, getEvent);
+EventsRouter.get("/admin-events", verifyAdminToken, getAllEvents);
+EventsRouter.get("/admin-events/active", verifyAdminToken, getActiveEvents);
+EventsRouter.get("/admin-events/:eventId", verifyAdminToken, getEvent);
 EventsRouter.delete("/events/delete/:id", verifyAdminToken, deleteEvent);
 
 // ORDERS ROUTES
 const OrdersRouter = express.Router();
-OrdersRouter.get("/orders/latest-orders", verifyAdminToken, getLatestOrders);
 OrdersRouter.get(
-  "/orders/:businessId",
+  "/admin-orders/latest-orders",
+  verifyAdminToken,
+  getLatestOrders
+);
+OrdersRouter.get(
+  "/admin-orders/:businessId",
   verifyAdminToken,
   getAllOrdersByBusiness
 );
 OrdersRouter.get(
-  "/orders/by-time/:interval",
+  "/admin-orders/by-time/:interval",
   verifyAdminToken,
   getOrdersByTimeInterval
 );
 OrdersRouter.get(
-  "/orders/get-business-revenue-by-month/:month",
+  "/admin-orders/get-revenue-by-month/:month",
   verifyAdminToken,
   getBusinessRevenueByMonth
 );
@@ -78,5 +93,16 @@ mainRouter.use("/auth", AuthRouter);
 mainRouter.use("/", EventsRouter);
 mainRouter.use("/", BusinessRouter);
 mainRouter.use("/", OrdersRouter);
+
+mainRouter.use("/business", business);
+mainRouter.use("/", orders);
+mainRouter.use("/", news);
+mainRouter.use("/", roles);
+mainRouter.use("/transactions", transactions);
+mainRouter.use("/", events);
+mainRouter.use("/", coupons);
+mainRouter.use("/", tickets);
+mainRouter.use("/", guests);
+mainRouter.use("/", contact);
 
 export { mainRouter as admin };

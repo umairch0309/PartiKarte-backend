@@ -957,6 +957,8 @@ export const getAllOrdersByEvent = async (req, res, next) => {
 export const getBusinessRevenueByMonth = async (req, res, next) => {
   const { month } = req.params;
 
+  console.log(month);
+
   const currentYear = new Date().getFullYear();
 
   try {
@@ -966,6 +968,8 @@ export const getBusinessRevenueByMonth = async (req, res, next) => {
     if (!user || !business) {
       return next(new HttpError("Invalid id", 400));
     }
+
+    console.log(business, month);
 
     const data = await Order.aggregate([
       {
