@@ -12,6 +12,7 @@ import {
   changeProfileDetails,
   getAllAdmins,
   updateAdmin,
+  deleteAdmin,
 } from "../controllers/adminControllers.js";
 
 import {
@@ -63,6 +64,7 @@ const AuthRouter = express.Router();
 AuthRouter.post("/login", authenticate);
 AuthRouter.post("/register", verifyAdminToken, register);
 AuthRouter.put("/update-admin/:adminId", verifyAdminToken, updateAdmin);
+AuthRouter.delete("/delete-admin/:adminId", verifyAdminToken, deleteAdmin);
 AuthRouter.get("/get-all-admins", verifyAdminToken, getAllAdmins);
 AuthRouter.put("/change-password", verifyAdminToken, updatePassword);
 AuthRouter.post("/forgot-password", forgotPassword);

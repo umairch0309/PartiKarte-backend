@@ -99,7 +99,7 @@ export const updateAdmin = async (req, res, next) => {
       email,
     });
 
-    if (existingAdmin) {
+    if (existingAdmin && existingAdmin?._id?.toString() !== adminId) {
       return next(new HttpError("Username or email already taken", 404));
     }
 
@@ -114,6 +114,34 @@ export const updateAdmin = async (req, res, next) => {
     res.status(201).json({
       message: "Admin updated successfully",
       _id: admin?._id,
+    });
+  } catch (error) {
+    console.log(error);
+    // If an error occurred, rollback the changes by deleting the created business
+  }
+};
+
+/**
+ * @method  deleteAdmin
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ * @returns registers user
+ */
+export const deleteAdmin = async (req, res, next) => {
+  const { adminId } = req.params;
+
+  try {
+    // Check if user already exists
+    const existingAdmin = await Admin.findByIdAndDelete(adminId);
+
+    if (!existingAdmin) {
+      return next(new HttpError("Couldn't find admin", 404));
+    }
+
+    res.status(201).json({
+      message: "Admin delete successfully",
+      _id: existingAdmin?._id,
     });
   } catch (error) {
     console.log(error);

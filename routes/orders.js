@@ -10,6 +10,9 @@ import {
   getOrdersByTimeInterval,
   getAllOrdersByEvent,
   getBusinessRevenueByMonth,
+  getOrderDetailsById,
+  refundOrderPayment,
+  resendTicketsToCustomer,
 } from "../controllers/orderControllers.js";
 
 const router = express.Router();
@@ -21,6 +24,13 @@ router.post("/result-api-callback", apiPaymentCallback);
 
 router.get("/orders/latest-orders", verifyToken, getLatestOrders);
 router.get("/orders/:eventId", verifyToken, getAllOrdersByEvent);
+router.get("/orders/order-detail/:orderId", verifyToken, getOrderDetailsById);
+router.get("/orders/refund-order/:orderId", verifyToken, refundOrderPayment);
+router.get(
+  "/orders/:orderId/resend-tickets",
+  verifyToken,
+  resendTicketsToCustomer
+);
 router.get("/orders/by-time/:interval", verifyToken, getOrdersByTimeInterval);
 router.get(
   "/orders/get-business-revenue-by-month/:month",
