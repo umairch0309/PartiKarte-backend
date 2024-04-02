@@ -178,6 +178,10 @@ const businessUserSchema = new mongoose.Schema(
         default: 0,
       },
     },
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
   },
   { collection: "businesses" }
 );

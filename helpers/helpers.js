@@ -15,7 +15,7 @@ export function generateUrlSlug(organizerName) {
 
 export function calculatePriceWithVAT(price, vatPercentage) {
   const vat = (price * vatPercentage) / 100;
-  const priceWithVAT = price + vat;
+  const priceWithVAT = parseFloat(price) + parseFloat(vat);
   return { vat, priceWithVAT };
 }
 

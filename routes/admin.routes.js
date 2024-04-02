@@ -10,6 +10,8 @@ import {
   resetPassword,
   profileDetails,
   changeProfileDetails,
+  getAllAdmins,
+  updateAdmin,
 } from "../controllers/adminControllers.js";
 
 import {
@@ -21,13 +23,23 @@ import {
 import {
   getAllBusinesses,
   getSingleBusinesses,
+  changeSingleBusinessStatus,
 } from "../controllers/admin/businesses.js";
 import {
   getAllOrdersByBusiness,
   getBusinessRevenueByMonth,
   getLatestOrders,
   getOrdersByTimeInterval,
+  getOrderDetailsById,
 } from "../controllers/admin/orders.js";
+
+import {
+  getAllRoles,
+  createRole,
+  updateRole,
+  getRole,
+  deleteRole,
+} from "../controllers/admin/roles.js";
 
 import { business } from "./admin/business.js";
 import { events } from "./admin/events.js";
@@ -39,13 +51,19 @@ import { guests } from "./admin/guests.js";
 import { transactions } from "./admin/transactions.js";
 import { coupons } from "./admin/coupon.js";
 import { roles } from "./admin/roles.js";
+import {
+  refundOrderPayment,
+  resendTicketsToCustomer,
+} from "../controllers/orderControllers.js";
 
 const mainRouter = express.Router();
 
 // AUTH ROUTES
 const AuthRouter = express.Router();
-AuthRouter.post("/register", register);
 AuthRouter.post("/login", authenticate);
+AuthRouter.post("/register", verifyAdminToken, register);
+AuthRouter.put("/update-admin/:adminId", verifyAdminToken, updateAdmin);
+AuthRouter.get("/get-all-admins", verifyAdminToken, getAllAdmins);
 AuthRouter.put("/change-password", verifyAdminToken, updatePassword);
 AuthRouter.post("/forgot-password", forgotPassword);
 AuthRouter.post("/verify-otp", verifyOtp);
@@ -57,6 +75,10 @@ AuthRouter.put("/update-profile", verifyAdminToken, changeProfileDetails);
 const BusinessRouter = express.Router();
 BusinessRouter.get("/businesses", getAllBusinesses);
 BusinessRouter.get("/business/:businessId/get-single", getSingleBusinesses);
+BusinessRouter.put(
+  "/business/:businessId/change-status",
+  changeSingleBusinessStatus
+);
 
 // EVENTS ROUTES
 const EventsRouter = express.Router();
@@ -71,6 +93,21 @@ OrdersRouter.get(
   "/admin-orders/latest-orders",
   verifyAdminToken,
   getLatestOrders
+);
+OrdersRouter.get(
+  "/admin-orders/order-detail/:orderId",
+  verifyAdminToken,
+  getOrderDetailsById
+);
+OrdersRouter.put(
+  "/admin-orders/refund-order/:orderId",
+  verifyAdminToken,
+  refundOrderPayment
+);
+OrdersRouter.put(
+  "/admin-orders/order/:orderId/resend-tickets",
+  verifyAdminToken,
+  resendTicketsToCustomer
 );
 OrdersRouter.get(
   "/admin-orders/:businessId",
@@ -88,11 +125,36 @@ OrdersRouter.get(
   getBusinessRevenueByMonth
 );
 
+const RolesRouter = express.Router();
+
+RolesRouter.get("/admin-roles/roles", verifyAdminToken, getAllRoles);
+
+RolesRouter.get("/admin-roles/roles/:roleId", verifyAdminToken, getRole);
+
+RolesRouter.post(
+  "/admin-roles/roles/create-role",
+  verifyAdminToken,
+  createRole
+);
+
+RolesRouter.put(
+  "/admin-roles/roles/update-role/:roleId",
+  verifyAdminToken,
+  updateRole
+);
+
+RolesRouter.delete(
+  "/admin-roles/roles/delete-role/:roleId",
+  verifyAdminToken,
+  deleteRole
+);
+
 // Sub Routes -> Main Route
 mainRouter.use("/auth", AuthRouter);
 mainRouter.use("/", EventsRouter);
 mainRouter.use("/", BusinessRouter);
 mainRouter.use("/", OrdersRouter);
+mainRouter.use("/", RolesRouter);
 
 mainRouter.use("/business", business);
 mainRouter.use("/", orders);

@@ -41,6 +41,19 @@ export const getLatestOrders = async (req, res, next) => {
   }
 };
 
+export const getOrderDetailsById = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId).populate("eventId").exec();
+
+    res.status(200).json({ message: "Order details", order: order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 export const getOrdersByTimeInterval = async (req, res, next) => {
   const { interval } = req.params;
   const { businessId } = req.query;

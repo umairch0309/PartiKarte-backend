@@ -41,3 +41,26 @@ export const getSingleBusinesses = async (req, res, next) => {
     return next(ServerError(error));
   }
 };
+
+export const changeSingleBusinessStatus = async (req, res, next) => {
+  const { businessId } = req.params;
+  const { isBlocked } = req.body;
+  try {
+    console.log(isBlocked, "isBlocked");
+    const business = await Business.findById(businessId);
+
+    if (!business) {
+      return next(new HttpError("Not found", 404));
+    }
+
+    business.isBlocked = isBlocked ? true : false;
+    await business.save();
+
+    res.status(200).json({
+      message: "Business status updated",
+      data: { business },
+    });
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};

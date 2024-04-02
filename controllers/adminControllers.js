@@ -28,7 +28,7 @@ import uploadS3Image from "../utils/uploadS3Image.js";
  * @returns registers user
  */
 export const register = async (req, res, next) => {
-  const { email, name } = req.body;
+  const { email, name, permissions, profile_image, role } = req.body;
 
   let admin;
 
@@ -51,28 +51,19 @@ export const register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password || "123456", salt);
 
     admin = new Admin({
-      role: "admin",
+      role: role || "admin",
       email,
       name,
       password: hashedPassword,
       salt,
-    });
-
-    const { otp, expiry } = generateOTP();
-
-    admin.otp = otp;
-    admin.otpExpiry = expiry;
-    admin.verifyEmailRequested = true;
-
-    const result = await SendVerifyOtpEmail({
-      email: admin?.email,
-      otp,
+      permissions,
+      profile_image,
     });
 
     await SendMemberAdditionEmail({
       email,
       password: password || "123456",
-      role: "admin",
+      role: role || "admin",
       company: "Partikarte",
     });
 
@@ -80,30 +71,53 @@ export const register = async (req, res, next) => {
     await admin.save();
 
     res.status(201).json({
-      message:
-        "Admin registered successfully. Please check your email for otp.",
+      message: "Admin registered successfully",
       _id: admin?._id,
-      data: {
-        verifyEmailRequested: true,
-      },
     });
   } catch (error) {
     console.log(error);
     // If an error occurred, rollback the changes by deleting the created business
-    if (admin) {
-      await Admin.findByIdAndDelete(admin._id);
+  }
+};
+
+/**
+ * @method  updatedAdmin
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ * @returns registers user
+ */
+export const updateAdmin = async (req, res, next) => {
+  const { email, name, permissions, profile_image, role } = req.body;
+  const { adminId } = req.params;
+
+  let admin;
+
+  try {
+    // Check if user already exists
+    const existingAdmin = await Admin.findOne({
+      email,
+    });
+
+    if (existingAdmin) {
+      return next(new HttpError("Username or email already taken", 404));
     }
 
-    if (error.name === "ValidationError") {
-      console.log(createValidationError(error));
-      return next(
-        new HttpError("Please enter unique registery or vat number", 409)
-      );
-    } else {
-      return next(
-        new HttpError("Unexpected error occurred while creating business", 500)
-      );
-    }
+    const admin = await Admin.findByIdAndUpdate(adminId, {
+      role: role || "admin",
+      email,
+      name,
+      permissions,
+      profile_image,
+    });
+
+    res.status(201).json({
+      message: "Admin updated successfully",
+      _id: admin?._id,
+    });
+  } catch (error) {
+    console.log(error);
+    // If an error occurred, rollback the changes by deleting the created business
   }
 };
 
@@ -225,6 +239,23 @@ export const updatePassword = async (req, res, next) => {
     });
 
     res.status(200).json({ message: "Password updated" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+/**
+ * @method  getAllAdmins
+ * @param {*} req
+ * @param {*} res
+ * @returns Changes password
+ * need to be merged 1
+ */
+export const getAllAdmins = async (req, res, next) => {
+  try {
+    const admin = await Admin.find();
+
+    res.status(200).json({ message: "All admins", admins: admin });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

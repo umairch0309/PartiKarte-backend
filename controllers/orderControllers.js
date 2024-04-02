@@ -479,12 +479,14 @@ export const createCardPaymentOrder = async (req, res, next) => {
 
     const neworder = new Order({
       eventId: new mongoose.Types.ObjectId(eventId),
+      merchantTransactionId: inputBody?.merchantTransactionId,
+      currency: inputBody?.currency,
       recommendations: recommendations === "true",
       purchaseId: responseBody?.purchaseId,
       bankUuid: responseBody?.uuid,
       tickets: transformedTickets,
       noOfTickets: parseInt(noOfTickets),
-      orderAmount: parseFloat(orderAmount),
+      orderAmount: inputBody?.amount,
       customerEmail,
       customerName,
       paymentStatus: false,
@@ -671,6 +673,189 @@ export const apiPaymentCallback = async (req, res, next) => {
       }
     }
     return res.status(200).send("OK");
+  } catch (error) {
+    return next(ServerError(error));
+  }
+};
+
+export const refundOrderPayment = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findByIdAndUpdate(orderId, {
+      status: "Refunded",
+    });
+
+    if (!order) {
+      return res.status(404).send({ message: "Couldn't find order!" });
+    }
+
+    const eventRef = await Event.findById(order?.eventId);
+
+    const inputBody = {
+      merchantTransactionId: order?.merchantTransactionId,
+      referenceUuid: order?.bankUuid,
+      amount: order?.amount,
+      currency: order?.currency,
+    };
+
+    const credentials = `${apiUsername}:${apiPassword}`;
+    const encodedCredentials = Buffer.from(credentials).toString("base64");
+
+    const currentDate = new Date().toUTCString();
+    // Prepare the message string for signing
+    const message = `POST\n${crypto
+      .createHash("sha512")
+      .update(JSON.stringify(inputBody))
+      .digest(
+        "hex"
+      )}\napplication/json; charset=utf-8\n${currentDate}\n/api/v3/transaction/${apiKey}/refund`;
+
+    // Create HMAC using sha512 and base64 encode the binary result
+    const signature = crypto
+      .createHmac("sha512", sharedSecret)
+      .update(message)
+      .digest("base64");
+
+    const headers = {
+      Authorization: `Basic ${encodedCredentials}`,
+      "Content-Type": "application/json; charset=utf-8",
+      Date: currentDate,
+      "X-Signature": signature,
+    };
+
+    const response = await axios.post(
+      `https://gateway.bankart.si/api/v3/transaction/${apiKey}/refund`,
+      inputBody,
+      { headers }
+    );
+
+    const responseBody = response.data;
+    console.log(responseBody, "payment data");
+    if (!responseBody.success || responseBody.success === "false") {
+      return res.status(400).send({ message: "Unable to refund!" });
+    }
+
+    if (!eventRef) {
+      return next(new HttpError("Event not found", 404));
+    }
+
+    eventRef.ticketsSold -= parseInt(order?.noOfTickets);
+    eventRef.revenue -= parseFloat(order?.orderAmount);
+
+    await eventRef.save();
+
+    const businessForCalc = await Business.findById(eventRef?.businessId);
+
+    await Business.findByIdAndUpdate(eventRef?.businessId, {
+      earnings: {
+        currentBalance:
+          (businessForCalc?.earnings?.currentBalance || 0) -
+          parseFloat(order?.orderAmount),
+        totalEarnings:
+          (businessForCalc?.earnings?.totalEarnings || 0) -
+          parseFloat(order?.orderAmount),
+      },
+    });
+
+    return res
+      .status(200)
+      .send({ message: "Order has been refunded successfully." });
+  } catch (error) {
+    console.error(error, "error in created payment with card");
+    return res.status(500).send({ message: "Server error" });
+  }
+};
+
+export const resendTicketsToCustomer = async (req, res, next) => {
+  const { email } = req.body;
+  const { orderId } = req.params;
+  try {
+    const order = await Order.findById(orderId);
+
+    const event = await Event.findById(order?.eventId);
+
+    if (!event) {
+      console.log(" couldn't find event");
+      return;
+    }
+    const transformedTickets = [];
+
+    const tickets = order.tickets;
+
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i];
+      const qrCodeData = `orderId=${order?._id}&&eventId=${event?._id}&&ticketId=${ticket?.ticketId}&&id=`;
+
+      const foundTicket = event?.tickets.find(
+        (t) => t._id?.toString() === ticket?.ticketId?.toString()
+      );
+
+      transformedTickets.push({
+        ticketId: ticket.ticketId,
+        noOfTickets: ticket.noOfTickets,
+        qrCodeData,
+        ticketAppearance: {
+          ...foundTicket?.ticketAppearance,
+          eventName: event?.eventName,
+          eventVenue: event?.eventVenue,
+          ticketPrice: foundTicket?.price,
+          ticketVat: foundTicket?.vat,
+          descriptionTicket: foundTicket?.descriptionTicket,
+          currency: currencySymbolGenerator(event?.eventCurrency),
+        },
+      });
+    }
+
+    const pdfResult = await generateTickets(transformedTickets);
+
+    const business = await Business.findById(event?.businessId);
+
+    const totalVatCalculated = () => {
+      let total = 0;
+      transformedTickets?.forEach((ticket) => {
+        if (ticket?.noOfTickets > 0) {
+          for (let i = 0; i < ticket?.noOfTickets; i++) {
+            total += parseFloat(ticket?.ticketAppearance?.ticketVat);
+          }
+        }
+      });
+      console.log(total, "total vat calculated");
+      return total;
+    };
+
+    const invoiceResult = await generateInvoice({
+      order,
+      vatAmount: totalVatCalculated() || 0,
+      business,
+      tickets: transformedTickets,
+      currency: currencySymbolGenerator(event?.eventCurrency),
+      type: "Order - Online",
+    });
+
+    console.log(invoiceResult, "invoice result");
+
+    await SendTicketEmail({
+      customerName: order?.customerName,
+      eventName: event?.eventName,
+      email: email || order?.customerEmail,
+      attachments: [
+        ...pdfResult?.map((el, index) => ({
+          content: el.toString("base64"),
+          filename: `ticket${index}.pdf`,
+          type: "application/pdf",
+          disposition: "attachment",
+        })),
+        ...invoiceResult?.map((el, index) => ({
+          content: el?.toString("base64"),
+          filename: `Invoice.pdf`,
+          type: "application/pdf",
+          disposition: "attachment",
+        })),
+      ],
+    });
+
+    return res.status(200).send("Successfully sent the tickets to customer!");
   } catch (error) {
     return next(ServerError(error));
   }

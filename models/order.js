@@ -58,12 +58,21 @@ const orderSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+
   customerEmail: {
     type: String,
     required: true,
   },
   customerPhoneNumber: {
     type: String,
+  },
+  merchantTransactionId: {
+    type: String,
+    trim: true,
+  },
+  currency: {
+    type: String,
+    trim: true,
   },
   purchaseId: {
     type: String,
@@ -111,6 +120,10 @@ const orderSchema = new mongoose.Schema({
   automatedMailSent: {
     type: Boolean,
     default: false,
+  },
+  status: {
+    type: String,
+    default: "Booked",
   },
 });
 
