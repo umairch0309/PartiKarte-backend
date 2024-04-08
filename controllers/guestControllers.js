@@ -59,6 +59,8 @@ export const createMultipleGuests = async (req, res, next) => {
       businessId: business._id,
       addedBy: userId,
       isNotified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }));
 
     await Guest.insertMany(guestsToSave);
