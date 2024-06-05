@@ -260,7 +260,7 @@ export const createBankPaymentOrder = async (req, res, next) => {
       recommendations: recommendations === "true",
       tickets: transformedTickets,
       noOfTickets: parseInt(noOfTickets),
-      orderAmount: parseFloat(orderAmount),
+      orderAmount: parseFloat(orderAmount).toFixed(2),
       customerEmail,
       customerName,
       paymentStatus: true,
@@ -408,7 +408,7 @@ export const createCardPaymentOrder = async (req, res, next) => {
 
     const inputBody = {
       merchantTransactionId: generateUniqueTransactionId(),
-      amount: `${parseFloat(orderAmount) + parseFloat(orderVatAmount)}`,
+      amount: `${parseFloat(orderAmount).toFixed(1)}`,
       currency: eventRef?.eventCurrency || "EUR",
       transactionToken: paymentRequestToken,
       callbackUrl: callbackUrl,
