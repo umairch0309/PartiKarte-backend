@@ -24,7 +24,36 @@ app.use(upload.any());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(morgan("dev"));
-app.use(cors());
+
+const allowedOrigins = [
+  "https://partikarte-frontend.vercel.app",
+  "https://partikarte-admin-five.vercel.app",
+  "https://partikarte-admin.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:4173",
+  "http://localhost:4174",
+  "http://localhost:3000",
+];
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/partikarte-frontend.*\.vercel\.app$/.test(origin) ||
+        /^https:\/\/partikarte-admin.*\.vercel\.app$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+      }
+    },
+    credentials: true,
+  })
+);
 
 app.use(async (req, res, next) => {
   try {
