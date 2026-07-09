@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/send-businesses-money",
+      "schedule": "0 0 1 * *"
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    },
+    "api/cron/send-businesses-money.js": {
+      "maxDuration": 60
+    }
+  }
+}

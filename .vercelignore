@@ -1,0 +1,4 @@
+admin-build
+build
+node_modules
+.env

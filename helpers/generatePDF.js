@@ -1,18 +1,30 @@
 import puppeteer from "puppeteer";
-import { Buffer } from "buffer";
 
-async function generatePDF(htmlArray) {
-  const browser = await puppeteer.launch({
+async function launchBrowser() {
+  if (process.env.VERCEL) {
+    const chromium = await import("@sparticuz/chromium");
+    const puppeteerCore = await import("puppeteer-core");
+
+    return puppeteerCore.default.launch({
+      args: chromium.default.args,
+      defaultViewport: chromium.default.defaultViewport,
+      executablePath: await chromium.default.executablePath(),
+      headless: chromium.default.headless,
+    });
+  }
+
+  return puppeteer.launch({
     ignoreDefaultArgs: ["--disable-extensions"],
     headless: "new",
     args: ["--use-gl=egl", "--no-sandbox", "--disable-setuid-sandbox"],
   });
+}
 
+async function generatePDF(htmlArray) {
+  const browser = await launchBrowser();
   const pdfPromises = [];
 
   for (const html of htmlArray) {
-    // console.log(html, "htmlItem", "__________________________");
-
     const page = await browser.newPage();
     await page.setContent(html);
 
@@ -27,19 +39,15 @@ async function generatePDF(htmlArray) {
       format: "A4",
       height: `${height + 20}px`,
       printBackground: true,
-      dpi: 72, // Lower DPI
-      quality: 40, // Lower image quality
+      dpi: 72,
+      quality: 40,
     });
 
     pdfPromises.push(pdfBuffer);
-
-    await page.close(); // Close the current page to create a new one in the next iteration
+    await page.close();
   }
 
   await browser.close();
-
-  // const combinedPdfBuffer = Buffer.concat(pdfPromises);
-
   return pdfPromises;
 }
 
