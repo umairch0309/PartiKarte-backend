@@ -4,3 +4,6 @@
 node_modules/
 jspm_packages/
 .vercel
+
+# Local uploaded images (S3 fallback)
+uploads/

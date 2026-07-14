@@ -97,10 +97,10 @@ export const addBusinessManager = async (req, res, next) => {
     const uploadedIDBack = await uploadS3Image(IDBack, "id_images/", next);
 
     if (
-      uploadedIDFront.uploadedImagePath &&
-      uploadedIDFront.status &&
-      uploadedIDBack.uploadedImagePath &&
-      uploadedIDBack.status
+      uploadedIDFront?.uploadedImagePath &&
+      uploadedIDFront?.status &&
+      uploadedIDBack?.uploadedImagePath &&
+      uploadedIDBack?.status
     ) {
       // Hash the password
       const salt = await bcrypt.genSalt(10);

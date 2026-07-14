@@ -104,6 +104,9 @@ export const register = async (req, res, next) => {
     user.otpExpiry = expiry;
     user.verifyEmailRequested = true;
 
+    // Local/dev: print OTP in the backend terminal so signup works even if email fails
+    console.log(`[DEV] Email verification OTP for ${user.email}: ${otp}`);
+
     const result = await SendVerifyOtpEmail({
       email: user?.email,
       otp,
@@ -120,6 +123,8 @@ export const register = async (req, res, next) => {
       data: {
         verifyEmailRequested: true,
       },
+      // Available in local responses so the UI can show a hint if needed
+      debugOtp: process.env.NODE_ENV !== "production" ? otp : undefined,
     });
   } catch (error) {
     console.log(error);

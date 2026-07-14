@@ -123,15 +123,19 @@ export const createNewEvent = async (req, res, next) => {
     eventCurrency,
   } = req.body;
 
-  const eventBanner = req.files[0];
+  const eventBanner = req.files?.[0];
 
   console.log(eventBanner);
 
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
-    const myBusiness = await Business.findById(user.businessId);
+    const myBusiness = await Business.findById(user?.businessId);
     if (!user || !business || !myBusiness) {
       return next(new HttpError("Invalid id", 400));
+    }
+
+    if (!eventBanner) {
+      return next(new HttpError("Event banner image is required", 400));
     }
 
     isImageFile(eventBanner.mimetype, next);
@@ -144,8 +148,15 @@ export const createNewEvent = async (req, res, next) => {
 
     let eventBannerLink = "";
 
-    if (uploadedEventBanner.uploadedImagePath && uploadedEventBanner.status) {
+    if (uploadedEventBanner?.uploadedImagePath && uploadedEventBanner?.status) {
       eventBannerLink = uploadedEventBanner.uploadedImagePath;
+    } else {
+      return next(
+        new HttpError(
+          "Could not upload event banner. Check AWS credentials or local upload fallback.",
+          500
+        )
+      );
     }
 
     const generateEventCode = async () => {
@@ -197,6 +208,7 @@ export const createNewEvent = async (req, res, next) => {
     }
     res.status(200).json({ message: "Event created", event: savedEvent });
   } catch (error) {
+    console.error("createNewEvent error:", error);
     return next(ServerError(error));
   }
 };
@@ -244,7 +256,7 @@ export const updateEvent = async (req, res, next) => {
         "event_banners/",
         next
       );
-      if (uploadedEventBanner.uploadedImagePath && uploadedEventBanner.status) {
+      if (uploadedEventBanner?.uploadedImagePath && uploadedEventBanner?.status) {
         eventBannerLink = uploadedEventBanner.uploadedImagePath;
       }
     }

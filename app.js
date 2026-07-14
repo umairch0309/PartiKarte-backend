@@ -66,6 +66,9 @@ app.use(async (req, res, next) => {
 
 app.use("/api/", router);
 
+// Local uploaded files (S3 fallback for development)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 if (!process.env.VERCEL) {
   const adminBuildPath = path.join(__dirname, "admin-build");
 

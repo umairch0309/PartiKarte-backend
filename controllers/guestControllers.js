@@ -4,8 +4,27 @@ import { SendGuestAddition } from "../helpers/sendEmail.js";
 import Event from "../models/event.js";
 import HttpError from "../helpers/HttpError.js";
 
+function parseBoolean(value, fallback = false) {
+  if (typeof value === "boolean") return value;
+  if (value === "true" || value === "1") return true;
+  if (value === "false" || value === "0") return false;
+  return fallback;
+}
+
+function normalizeGuestPayload(body = {}) {
+  return {
+    name: String(body.name || "").trim(),
+    surname: String(body.surname || "").trim(),
+    guestType: String(body.guestType || "").trim(),
+    email: String(body.email || "").trim(),
+    phoneNumber: String(body.phoneNumber || "").trim(),
+    isNotified: parseBoolean(body.isNotified, false),
+    eventId: body.eventId,
+  };
+}
+
 // Create a new guest
-export const createGuest = async (req, res) => {
+export const createGuest = async (req, res, next) => {
   const { userId } = req;
 
   try {
@@ -14,24 +33,80 @@ export const createGuest = async (req, res) => {
       return next(new HttpError("Invalid id", 400));
     }
 
+    const payload = normalizeGuestPayload(req.body);
+
+    if (!payload.eventId || payload.eventId === "undefined") {
+      return res.status(400).json({
+        message: "Please select an event before adding a guest.",
+      });
+    }
+
+    if (!payload.name || !payload.surname || !payload.guestType) {
+      return res.status(400).json({
+        message: "Name, surname and guest type are required.",
+      });
+    }
+
+    const event = await Event.findById(payload.eventId);
+    if (!event) {
+      return res.status(400).json({
+        message: "Invalid event. Create/select an event first.",
+      });
+    }
+
+    if (String(event.businessId) !== String(business._id)) {
+      return res.status(403).json({
+        message: "You can only add guests to your own events.",
+      });
+    }
+
     const newGuest = new Guest({
-      ...req.body,
-      businessId: business?._id,
+      ...payload,
+      businessId: business._id,
       addedBy: userId,
     });
     await newGuest.save();
 
-    const event = await Event.findById(req.body.eventId);
-
-    await SendGuestAddition({
-      email: req.body.email,
-      event: event?.eventName,
-      company: business?.company?.companyName,
-    });
+    // Email is best-effort — SendGrid failures must not fail guest creation
+    if (payload.email && payload.isNotified) {
+      try {
+        await SendGuestAddition({
+          email: payload.email,
+          event: event?.eventName,
+          company: business?.company?.companyName,
+        });
+      } catch (emailError) {
+        console.error(
+          "Guest created but notification email failed:",
+          emailError?.message || emailError
+        );
+      }
+    }
 
     return res.status(201).json({ message: "Guest added successfully" });
   } catch (error) {
-    return res.status(500).json({ error: "Failed to create guest." });
+    console.error("createGuest error:", error);
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        message: Object.values(error.errors)
+          .map((item) => item.message)
+          .join(", "),
+        error: "Failed to create guest.",
+      });
+    }
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid event id. Please select a valid event.",
+        error: "Failed to create guest.",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Failed to create guest.",
+      error: "Failed to create guest.",
+    });
   }
 };
 
@@ -63,11 +138,19 @@ export const createMultipleGuests = async (req, res, next) => {
 
     await Guest.insertMany(guestsToSave);
 
-    await SendGuestAddition({
-      email: guestsToSave.map((guest) => guest.email),
-      event: event?.eventName,
-      company: business?.company?.companyName,
-    });
+    try {
+      await SendGuestAddition({
+        email: guestsToSave.map((guest) => guest.email).filter(Boolean),
+        event: event?.eventName,
+        company: business?.company?.companyName,
+      });
+    } catch (emailError) {
+      console.error(
+        "Guests created but notification email failed:",
+        emailError?.message || emailError
+      );
+    }
+
     return res.status(201).json({ message: "Guests added successfully" });
   } catch (error) {
     console.log(error, "error creating multiple guests");
