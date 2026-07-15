@@ -24,7 +24,7 @@ const sendEmail = async (
 
     const data = {
       to: receiver,
-      from: process.env.EMAIL_FROM,
+      from: process.env.EMAIL_FROM || "info@partikarte.si",
       subject: subject,
       html: emailTemplate,
       ...(attachments?.length > 0 && { attachments }),
@@ -73,7 +73,7 @@ export const SendVerifyOtpEmail = async (data) => {
 export const SendContactUsEmail = async (data) => {
   const subject = "Contact Us Email";
   const result = sendEmail(
-    process.env.EMAIL_FROM,
+    process.env.EMAIL_FROM || "info@partikarte.si",
     subject,
     { ...data, subject },
     "contact-us",
