@@ -31,19 +31,24 @@ const sendEmail = async (
     };
 
     result = await sgMail.send(data);
-    console.log("email sent");
+    console.log("email sent", { to: receiver, from: data.from, subject });
+    return { ok: true, result };
   } catch (e) {
-    result = e;
-    console.log("could not send email", e);
+    const details = e?.response?.body || e?.message || e;
+    console.error("could not send email", {
+      to: receiver,
+      from: process.env.EMAIL_FROM || "info@partikarte.si",
+      subject,
+      details,
+    });
+    return { ok: false, error: details };
   }
-
-  return result;
 };
 
 export const SendOtpEmail = async (data) => {
   const { email, otp } = data;
   const subject = "Forgot Password - OTP Verification";
-  const result = sendEmail(
+  return sendEmail(
     email,
     subject,
     {
@@ -52,13 +57,12 @@ export const SendOtpEmail = async (data) => {
     },
     "forgot-password"
   );
-  return result;
 };
 
 export const SendVerifyOtpEmail = async (data) => {
   const { email, otp } = data;
   const subject = "Welcome - Email Verification.";
-  const result = sendEmail(
+  return sendEmail(
     email,
     subject,
     {
@@ -67,37 +71,34 @@ export const SendVerifyOtpEmail = async (data) => {
     },
     "verify-email"
   );
-  return result;
 };
 
 export const SendContactUsEmail = async (data) => {
   const subject = "Contact Us Email";
-  const result = sendEmail(
+  return sendEmail(
     process.env.EMAIL_FROM || "info@partikarte.si",
     subject,
     { ...data, subject },
     "contact-us",
     data.attachments
   );
-  return result;
 };
 
 export const SendTicketEmail = async (data) => {
   const subject = "Ticket Confirmation - Thank You";
-  const result = sendEmail(
+  return sendEmail(
     data?.email,
     subject,
     { ...data, subject },
     "booking-confirmation",
     data.attachments
   );
-  return result;
 };
 
 export const SendMemberAdditionEmail = async (data) => {
   const { email } = data;
   const subject = "Welcome to the Team";
-  const result = sendEmail(
+  return sendEmail(
     email,
     subject,
     {
@@ -106,13 +107,12 @@ export const SendMemberAdditionEmail = async (data) => {
     },
     "welcome-member"
   );
-  return result;
 };
 
 export const SendGuestAddition = async (data) => {
   const { email } = data;
   const subject = "Most Welcome to the Event";
-  const result = sendEmail(
+  return sendEmail(
     email,
     subject,
     {
@@ -121,13 +121,12 @@ export const SendGuestAddition = async (data) => {
     },
     "welcome-guest"
   );
-  return result;
 };
 
 export const SendPasswordChangedEmail = async (data) => {
   const { email } = data;
   const subject = "Password Changed Successfully!";
-  const result = sendEmail(
+  return sendEmail(
     email,
     subject,
     {
@@ -135,5 +134,4 @@ export const SendPasswordChangedEmail = async (data) => {
     },
     "password-changed"
   );
-  return result;
 };

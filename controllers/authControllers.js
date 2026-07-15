@@ -116,6 +116,12 @@ export const register = async (req, res, next) => {
       otp,
     });
 
+    if (result && result.ok === false) {
+      console.error(
+        `[EMAIL] Verification OTP email failed for ${user.email}. OTP still issued.`
+      );
+    }
+
     // Save the new user
     await user.save();
     // Save the new business
