@@ -19,6 +19,17 @@ export function calculatePriceWithVAT(price, vatPercentage) {
   return { vat, priceWithVAT };
 }
 
+/** Expose OTP in API responses for local/QA when email delivery is unreliable. */
+export function getDebugOtp(otp) {
+  if (
+    process.env.DEV_LOG_OTP === "true" ||
+    process.env.NODE_ENV !== "production"
+  ) {
+    return otp;
+  }
+  return undefined;
+}
+
 export function generateOTP() {
   const otpLength = 6;
 

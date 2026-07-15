@@ -6,7 +6,11 @@ import Business from "../models/business.js";
 import User from "../models/user.js";
 
 import { userSchema } from "../helpers/validation.js";
-import { generateOTP, generateUrlSlug } from "../helpers/helpers.js";
+import {
+  generateOTP,
+  generateUrlSlug,
+  getDebugOtp,
+} from "../helpers/helpers.js";
 
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { createValidationError } from "../helpers/HttpError.js";
@@ -123,8 +127,8 @@ export const register = async (req, res, next) => {
       data: {
         verifyEmailRequested: true,
       },
-      // Available in local responses so the UI can show a hint if needed
-      debugOtp: process.env.NODE_ENV !== "production" ? otp : undefined,
+      // Shown in UI when DEV_LOG_OTP=true (or local/non-production)
+      debugOtp: getDebugOtp(otp),
     });
   } catch (error) {
     console.log(error);
@@ -197,6 +201,7 @@ export const authenticate = async (req, res, next) => {
         data: {
           verifyEmailRequested: true,
         },
+        debugOtp: getDebugOtp(otp),
       });
     }
 
@@ -315,6 +320,7 @@ export const forgotPassword = async (req, res, next) => {
 
     res.status(200).json({
       message: "Reset pasword otp generated and sent to your email address.",
+      debugOtp: getDebugOtp(otp),
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
