@@ -77,6 +77,48 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  platformFeeAmount: {
+    type: Number,
+    default: 0,
+  },
+  netToBusiness: {
+    type: Number,
+    default: 0,
+  },
+  stripePaymentIntentId: {
+    type: String,
+    trim: true,
+  },
+  stripeCheckoutSessionId: {
+    type: String,
+    trim: true,
+  },
+  stripeCustomerId: {
+    type: String,
+    trim: true,
+  },
+  stripeInvoiceId: {
+    type: String,
+    trim: true,
+  },
+  currency: {
+    type: String,
+    trim: true,
+    default: "EUR",
+  },
+  refundedApplicationFee: {
+    type: Boolean,
+    default: false,
+  },
+  refundStatus: {
+    type: String,
+    enum: ["none", "partial", "full"],
+    default: "none",
+  },
+  refundedAmount: {
+    type: Number,
+    default: 0,
+  },
   paymentStatus: {
     type: Boolean,
     default: false,

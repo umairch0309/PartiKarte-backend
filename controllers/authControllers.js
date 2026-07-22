@@ -6,11 +6,7 @@ import Business from "../models/business.js";
 import User from "../models/user.js";
 
 import { userSchema } from "../helpers/validation.js";
-import {
-  generateOTP,
-  generateUrlSlug,
-  getDebugOtp,
-} from "../helpers/helpers.js";
+import { generateOTP, generateUrlSlug } from "../helpers/helpers.js";
 
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import { createValidationError } from "../helpers/HttpError.js";
@@ -108,12 +104,10 @@ export const register = async (req, res, next) => {
     user.otpExpiry = expiry;
     user.verifyEmailRequested = true;
 
-    // Local/dev: print OTP in the backend terminal so signup works even if email fails
-    console.log(`[DEV] Email verification OTP for ${user.email}: ${otp}`);
-
     const result = await SendVerifyOtpEmail({
       email: user?.email,
       otp,
+      otpExpiry: expiry,
     });
 
     if (result && result.ok === false) {
@@ -133,8 +127,6 @@ export const register = async (req, res, next) => {
       data: {
         verifyEmailRequested: true,
       },
-      // Shown in UI when DEV_LOG_OTP=true (or local/non-production)
-      debugOtp: getDebugOtp(otp),
     });
   } catch (error) {
     console.log(error);
@@ -199,7 +191,14 @@ export const authenticate = async (req, res, next) => {
       const result = await SendVerifyOtpEmail({
         email: updatedUser?.email,
         otp,
+        otpExpiry: expiry,
       });
+
+      if (result && result.ok === false) {
+        console.error(
+          `[EMAIL] Verification OTP email failed for ${updatedUser.email}. OTP still issued.`
+        );
+      }
 
       return res.status(400).send({
         message:
@@ -207,7 +206,6 @@ export const authenticate = async (req, res, next) => {
         data: {
           verifyEmailRequested: true,
         },
-        debugOtp: getDebugOtp(otp),
       });
     }
 
@@ -317,16 +315,17 @@ export const forgotPassword = async (req, res, next) => {
     const result = await SendOtpEmail({
       email: updatedUser?.email,
       otp,
+      otpExpiry: expiry,
     });
 
-    console.log("emai response");
-    if (!result) {
-      res.status(500).json({ error: error.message });
+    if (result && result.ok === false) {
+      console.error(
+        `[EMAIL] Password reset OTP email failed for ${updatedUser.email}. OTP still issued.`
+      );
     }
 
     res.status(200).json({
       message: "Reset pasword otp generated and sent to your email address.",
-      debugOtp: getDebugOtp(otp),
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

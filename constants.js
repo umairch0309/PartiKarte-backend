@@ -1,20 +1,2 @@
-// Payment configuration
-export const apiKey = "2359480IT540369-Sim";
-export const apiUsername = "Api04Magnamic";
-export const apiPassword = "jLZzdv.q?Q94la0Hi)FLsYCVPLl0R";
-export const sharedSecret = "rrNurxOrwsjyehtIp401utmS0Obvau";
-
-// payment urls
-export const callbackUrl = "http://3.136.18.99/api/result-api-callback";
-export const successUrl = "http://3.136.18.99/checkout/payment-success";
-export const errorUrl = "http://3.136.18.99/checkout/payment-error";
-export const cancelUrl = "http://3.136.18.99/checkout/payment-error";
-
-// Bank Transfer urls
-export const psuIpAddress = "http://3.136.18.99";
-
-// ssl payment usls
-// export const callbackUrl = "https://partikarte.si/api/result-api-callback";
-// export const successUrl = "https://partikarte.si/checkout/payment-success";
-// export const errorUrl = "https://partikarte.si/checkout/payment-error";
-// export const cancelUrl = "https://partikarte.si/checkout/payment-error";
+// Legacy Bankart payment config removed — payments now use Stripe Connect.
+// Redirect URLs for Stripe Checkout are built from FRONTEND_URL in stripeControllers.

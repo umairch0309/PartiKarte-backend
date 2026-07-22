@@ -91,6 +91,15 @@
     <div class="container">
       <table width="100%">
         <tr>
+          <td width="100%" align="center" style="padding: 18px 0; background: #3d8aff;">
+            <img
+              src="<%= typeof headerLogoUrl !== 'undefined' && headerLogoUrl ? headerLogoUrl : (typeof logoUrl !== 'undefined' && logoUrl ? logoUrl : '') %>"
+              alt="Partikarte"
+              style="height: 36px; width: auto; max-width: 240px; display: inline-block;"
+            />
+          </td>
+        </tr>
+        <tr>
           <td width="100%">
             <div
               style="
@@ -214,23 +223,49 @@
         <tr>
           <td>
             <table width="300px" style="float: right">
+              <% 
+                var feePercent = typeof platformFeePercent !== 'undefined' && platformFeePercent != null
+                  ? Number(platformFeePercent)
+                  : 8;
+                var subtotal = Number(order?.orderAmount || 0);
+                var taxAmount = Number(vatAmount || 0);
+                var platformFee = Number(order?.platformFeeAmount);
+                if (!platformFee || platformFee <= 0) {
+                  platformFee = Math.round(subtotal * (feePercent / 100) * 100) / 100;
+                }
+                var netToBusiness = Number(order?.netToBusiness);
+                if (!netToBusiness || netToBusiness <= 0) {
+                  netToBusiness = Math.round((subtotal - platformFee) * 100) / 100;
+                }
+              %>
               <tr>
                 <td><strong>Sub-total:</strong></td>
                 <td style="text-align: right">
-                  <%= order?.orderAmount %> <%= currency %>
+                  <%= subtotal.toFixed(2) %> <%= currency %>
                 </td>
               </tr>
               <tr>
-                <td><strong>Tax 8%:</strong></td>
+                <td><strong>VAT:</strong></td>
                 <td style="text-align: right">
-                  <%= order?.orderAmount * vatAmount %> <%= currency %>
+                  <%= taxAmount.toFixed(2) %> <%= currency %>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Platform Fee (<%= feePercent %>%):</strong></td>
+                <td style="text-align: right">
+                  <%= platformFee.toFixed(2) %> <%= currency %>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Net to Business:</strong></td>
+                <td style="text-align: right">
+                  <%= netToBusiness.toFixed(2) %> <%= currency %>
                 </td>
               </tr>
               <tr>
                 <td><strong>Grand total:</strong></td>
                 <td style="text-align: right">
-                  <%= order?.orderAmount + (order?.orderAmount * vatAmount) %>
-                  <%= currency %>
+                  <%= subtotal.toFixed(2) %> <%= currency %>
                 </td>
               </tr>
             </table>
@@ -243,9 +278,11 @@
       </div>
     </div>
     <!-- container -->
-    <div style="height: 50px" class="footer">
+    <div style="height: 64px; background: #3d8aff; display: flex; justify-content: center; align-items: center;" class="footer">
       <img
-        src="https://partibucket.s3.eu-west-3.amazonaws.com/images/partikarte_data/partikarte-for-ticket-pdf.png"
+        src="<%= typeof logoUrl !== 'undefined' && logoUrl ? logoUrl : '' %>"
+        alt="Partikarte"
+        style="height: 32px; width: auto; max-width: 240px; display: block;"
       />
     </div>
   </body>

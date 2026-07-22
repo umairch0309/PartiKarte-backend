@@ -9,6 +9,7 @@ import morgan from "morgan";
 import { fileURLToPath } from "url";
 
 import HttpError from "./helpers/HttpError.js";
+import { stripeWebhook } from "./controllers/stripeControllers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +17,22 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const app = express();
+
+// Stripe webhooks require the raw body for signature verification.
+// Must be registered BEFORE multer / json parsers.
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res, next) => {
+    try {
+      await connectDB();
+      next();
+    } catch (error) {
+      next(error);
+    }
+  },
+  stripeWebhook
+);
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -66,8 +83,12 @@ app.use(async (req, res, next) => {
 
 app.use("/api/", router);
 
-// Local uploaded files (S3 fallback for development)
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Local uploaded files (S3 fallback for development).
+// fallthrough:false prevents missing files from hitting the SPA catch-all (login page).
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), { fallthrough: false })
+);
 
 if (!process.env.VERCEL) {
   const adminBuildPath = path.join(__dirname, "admin-build");

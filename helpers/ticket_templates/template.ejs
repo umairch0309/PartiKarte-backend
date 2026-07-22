@@ -151,19 +151,19 @@
           <div class="box">
             <p class="label">From</p>
             <h4 class="text">
-              <%= eventStart? new Date(eventStart)?.toLocaleString(): ' ' %>
+              <%= typeof eventStart !== 'undefined' && eventStart ? new Date(eventStart).toLocaleString() : ' ' %>
             </h4>
           </div>
           <div class="box">
             <p class="label">To</p>
             <h4 class="text">
-              <%= eventEnd? new Date(eventEnd)?.toLocaleString(): '' %>
+              <%= typeof eventEnd !== 'undefined' && eventEnd ? new Date(eventEnd).toLocaleString() : '' %>
             </h4>
           </div>
           <div class="box">
             <p class="label">Entry time</p>
             <h4 class="text">
-              <%= new Date(entryTimeWithTicket)?.toLocaleString() %>
+              <%= typeof entryTimeWithTicket !== 'undefined' && entryTimeWithTicket ? new Date(entryTimeWithTicket).toLocaleString() : (typeof entryTime !== 'undefined' && entryTime ? entryTime : '') %>
             </h4>
           </div>
         </div>
@@ -171,7 +171,7 @@
           <p class="label">Venue</p>
           <h4 class="text"><%= eventVenue %></h4>
         </div>
-        <% if (eventAddress && eventAddress.eventLink) { %>
+        <% if (typeof eventAddress !== 'undefined' && eventAddress && eventAddress.eventLink) { %>
         <div class="box">
           <p class="label">Event Link</p>
           <h4 class="text"><%= eventAddress.eventLink %></h4>
@@ -180,20 +180,20 @@
         <div class="side-by-side">
           <div class="box">
             <p class="label">City</p>
-            <h4 class="text"><%= eventAddress.city %></h4>
+            <h4 class="text"><%= typeof eventAddress !== 'undefined' && eventAddress ? (eventAddress.city || city || '') : (typeof city !== 'undefined' ? city : '') %></h4>
           </div>
           <div class="box">
             <p class="label">Country</p>
-            <h4 class="text"><%= eventAddress.country %></h4>
+            <h4 class="text"><%= typeof eventAddress !== 'undefined' && eventAddress ? (eventAddress.country || country || '') : (typeof country !== 'undefined' ? country : '') %></h4>
           </div>
           <div class="box">
             <p class="label">Postal Code</p>
-            <h4 class="text"><%= eventAddress.postalCode %></h4>
+            <h4 class="text"><%= typeof eventAddress !== 'undefined' && eventAddress ? (eventAddress.postalCode || postalCode || '') : (typeof postalCode !== 'undefined' ? postalCode : '') %></h4>
           </div>
         </div>
         <div class="box">
           <p class="label">Address</p>
-          <h4 class="text"><%= eventAddress.addressDescription %></h4>
+          <h4 class="text"><%= typeof eventAddress !== 'undefined' && eventAddress ? (eventAddress.addressDescription || address || '') : (typeof address !== 'undefined' ? address : '') %></h4>
         </div>
         <% } %>
       </div>
@@ -251,7 +251,9 @@
     </div>
     <div class="footer">
       <img
-        src="https://partibucket.s3.eu-west-3.amazonaws.com/images/partikarte_data/partikarte-for-ticket-pdf.png"
+        src="<%= typeof logoUrl !== 'undefined' && logoUrl ? logoUrl : '' %>"
+        alt="Partikarte"
+        style="height:32px;width:auto;max-width:240px;display:block;"
       />
     </div>
   </body>

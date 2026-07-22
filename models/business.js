@@ -178,6 +178,24 @@ const businessUserSchema = new mongoose.Schema(
         default: 0,
       },
     },
+    stripe: {
+      accountId: {
+        type: String,
+        trim: true,
+      },
+      onboardingComplete: {
+        type: Boolean,
+        default: false,
+      },
+      chargesEnabled: {
+        type: Boolean,
+        default: false,
+      },
+      payoutsEnabled: {
+        type: Boolean,
+        default: false,
+      },
+    },
   },
   { collection: "businesses" }
 );

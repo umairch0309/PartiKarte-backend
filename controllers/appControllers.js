@@ -68,6 +68,7 @@ export const authenticateForApp = async (req, res, next) => {
       const result = await SendVerifyOtpEmail({
         email: updatedUser?.email,
         otp,
+        otpExpiry: expiry,
       });
 
       return res.status(401).send({

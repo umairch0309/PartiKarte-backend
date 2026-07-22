@@ -134,6 +134,15 @@ export const createNewEvent = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
+    if (!myBusiness.stripe?.chargesEnabled) {
+      return next(
+        new HttpError(
+          "Connect your Stripe account in Settings → Finance before creating events.",
+          403
+        )
+      );
+    }
+
     if (!eventBanner) {
       return next(new HttpError("Event banner image is required", 400));
     }

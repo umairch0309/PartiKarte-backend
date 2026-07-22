@@ -13,9 +13,15 @@ import { coupons } from "./coupon.js";
 import { roles } from "./roles.js";
 import { app } from "./app.routes.js";
 import { admin } from "./admin.routes.js";
+import { stripeRoutes } from "./stripe.js";
+import { notifications } from "./notifications.js";
+import { publicDocs } from "./publicDocs.js";
 const router = Router();
 
+router.use("/public", publicDocs);
 router.use("/business", business);
+router.use("/stripe", stripeRoutes);
+router.use("/notifications", notifications);
 router.use("/", orders);
 router.use("/auth", auth);
 router.use("/app", app);

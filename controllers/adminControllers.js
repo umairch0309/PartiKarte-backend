@@ -28,7 +28,7 @@ import uploadS3Image from "../utils/uploadS3Image.js";
  * @returns registers user
  */
 export const register = async (req, res, next) => {
-  const { email, name } = req.body;
+  const { email, name, role, permissions } = req.body;
 
   let admin;
 
@@ -42,8 +42,6 @@ export const register = async (req, res, next) => {
       return next(new HttpError("Username or email already taken", 404));
     }
 
-    console.log(existingAdmin);
-
     const password = generateRandomCode(8);
 
     // Hash the password
@@ -51,11 +49,12 @@ export const register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password || "123456", salt);
 
     admin = new Admin({
-      role: "admin",
+      role: role || "admin",
       email,
       name,
       password: hashedPassword,
       salt,
+      ...(permissions ? { permissions } : {}),
     });
 
     const { otp, expiry } = generateOTP();
@@ -64,15 +63,16 @@ export const register = async (req, res, next) => {
     admin.otpExpiry = expiry;
     admin.verifyEmailRequested = true;
 
-    const result = await SendVerifyOtpEmail({
+    await SendVerifyOtpEmail({
       email: admin?.email,
       otp,
+      otpExpiry: expiry,
     });
 
     await SendMemberAdditionEmail({
       email,
       password: password || "123456",
-      role: "admin",
+      role: role || "admin",
       company: "Partikarte",
     });
 
@@ -149,6 +149,7 @@ export const authenticate = async (req, res, next) => {
       const result = await SendVerifyOtpEmail({
         email: updatedUser?.email,
         otp,
+        otpExpiry: expiry,
       });
 
       return res.status(400).send({
@@ -265,6 +266,7 @@ export const forgotPassword = async (req, res, next) => {
     const result = await SendOtpEmail({
       email: updatedUser?.email,
       otp,
+      otpExpiry: expiry,
     });
 
     console.log("emai response");
@@ -375,6 +377,74 @@ export const resetPassword = async (req, res, next) => {
   }
 };
 
+export const getAllAdmins = async (req, res, next) => {
+  try {
+    const admins = await Admin.find()
+      .select("-password -salt -otp")
+      .populate("permissions")
+      .sort({ _id: -1 });
+
+    res.status(200).json({
+      message: "Admins",
+      data: { admins },
+      admins,
+    });
+  } catch (error) {
+    console.error(error);
+    return next(ServerError(error));
+  }
+};
+
+export const updateAdmin = async (req, res, next) => {
+  const { adminId } = req.params;
+  const { name, email, role, permissions } = req.body;
+
+  try {
+    const updated = await Admin.findByIdAndUpdate(
+      adminId,
+      {
+        ...(name !== undefined && { name }),
+        ...(email !== undefined && { email }),
+        ...(role !== undefined && { role }),
+        ...(permissions !== undefined && { permissions }),
+      },
+      { new: true }
+    ).select("-password -salt -otp");
+
+    if (!updated) {
+      return next(new HttpError("Admin not found", 404));
+    }
+
+    res.status(200).json({
+      message: "Admin updated successfully",
+      data: { admin: updated },
+    });
+  } catch (error) {
+    console.error(error);
+    return next(ServerError(error));
+  }
+};
+
+export const deleteAdmin = async (req, res, next) => {
+  const { adminId } = req.params;
+
+  try {
+    if (String(req.userId) === String(adminId)) {
+      return next(new HttpError("You cannot delete your own account", 400));
+    }
+
+    const deleted = await Admin.findByIdAndDelete(adminId);
+    if (!deleted) {
+      return next(new HttpError("Admin not found", 404));
+    }
+
+    res.status(200).json({ message: "Admin deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    return next(ServerError(error));
+  }
+};
+
 export const profileDetails = async (req, res, next) => {
   const userId = req.userId;
 
@@ -415,16 +485,20 @@ export const changeProfileDetails = async (req, res, next) => {
       return next(new HttpError("Invalid admin id", 404));
     }
 
-    if (admin && req.files) {
-      console.log(req.files[0]);
-      isImageFile(req.files[0]?.mimetype, next);
+    const imageFile = Array.isArray(req.files)
+      ? req.files[0]
+      : req.file || null;
+
+    // Only upload when a real image file was attached
+    if (imageFile?.buffer) {
+      isImageFile(imageFile.mimetype, next);
 
       const uploadedImageObj = await uploadS3Image(
-        req.files[0],
+        imageFile,
         "profile_images/",
         next
       );
-      if (uploadedImageObj.uploadedImagePath && uploadedImageObj.status) {
+      if (uploadedImageObj?.uploadedImagePath && uploadedImageObj.status) {
         uploadedImage = uploadedImageObj.uploadedImagePath;
       }
     }
@@ -442,8 +516,9 @@ export const changeProfileDetails = async (req, res, next) => {
       return res.status(404).json({ error: "Something went wrong" });
     }
 
-    res.status(200).json({ message: "Profile updated" });
+    return res.status(200).json({ message: "Profile updated" });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    if (res.headersSent) return;
+    return res.status(400).json({ error: error.message });
   }
 };

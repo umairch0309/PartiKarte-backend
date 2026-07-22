@@ -1,32 +1,39 @@
 import Event from "../models/event.js";
 import HttpError, { ServerError } from "../helpers/HttpError.js";
 import Order from "../models/order.js";
-import axios from "axios";
-import crypto from "crypto";
 import mongoose from "mongoose";
-import {
-  callbackUrl,
-  cancelUrl,
-  errorUrl,
-  successUrl,
-  apiKey,
-  apiPassword,
-  apiUsername,
-  sharedSecret,
-  psuIpAddress,
-} from "../constants.js";
 import { findBusinessAndUser } from "../DAL/common.js";
 import generateTickets from "../helpers/generateTickets.js";
 import { SendTicketEmail } from "../helpers/sendEmail.js";
 import generateInvoice from "../helpers/generateInvoice.js";
+import {
+  buildTicketEmailAttachments,
+  saveOrderDocuments,
+} from "../helpers/orderDocuments.js";
 import Business from "../models/business.js";
 import Coupon from "../models/coupon.js";
 import { currencySymbolGenerator } from "../helpers/helpers.js";
+import { calculateFeeSplit } from "../helpers/stripeFees.js";
+import { PLATFORM_FEE_PERCENT } from "../config/stripe.js";
+import {
+  convertToEurWithRates,
+  getRatesFromEur,
+  normalizeCurrency,
+  roundMoney,
+} from "../helpers/currency.js";
+import {
+  notifyNewPaidOrder,
+  notifyTicketPurchase,
+} from "../services/notifications.js";
 
-function generateUniqueTransactionId() {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000000); // Generate a random number between 0 and 999999
-  return `${timestamp}-${random}`;
+function amountInEur(order, field, rates) {
+  return convertToEurWithRates(order[field], order.currency, rates);
+}
+
+function toLocalHourBucket(dateInput) {
+  const d = new Date(dateInput);
+  d.setMinutes(0, 0, 0);
+  return d.toISOString();
 }
 
 function monthNameToNumber(monthName) {
@@ -149,24 +156,26 @@ export const createFreeOrder = async (req, res, next) => {
 
     console.log(invoiceResult, "invoice result");
 
-    SendTicketEmail({
+    await notifyNewPaidOrder({
+      order: neworder,
+      eventName: eventRef?.eventName,
+    });
+    await notifyTicketPurchase({
+      order: neworder,
+      eventName: eventRef?.eventName,
+    });
+
+    const savedDocs = saveOrderDocuments({
+      orderId: neworder._id.toString(),
+      pdfResult,
+      invoiceResult,
+    });
+    await SendTicketEmail({
       email: customerEmail,
       customerName,
       eventName: eventRef?.eventName,
-      attachments: [
-        ...pdfResult?.map((el, index) => ({
-          content: el.toString("base64"),
-          filename: `ticket${index}.pdf`,
-          type: "application/pdf",
-          disposition: "attachment",
-        })),
-        ...invoiceResult?.map((el, index) => ({
-          content: el?.toString("base64"),
-          filename: `Invoice.pdf`,
-          type: "application/pdf",
-          disposition: "attachment",
-        })),
-      ],
+      documentLinks: savedDocs.files,
+      attachments: buildTicketEmailAttachments(pdfResult, invoiceResult),
     });
 
     res.status(201).send({
@@ -243,24 +252,21 @@ export const createBankPaymentOrder = async (req, res, next) => {
     //     );
     //   });
 
-    const currentDate = new Date();
-    const headers = {
-      "X-IBM-Client-Id": clientId,
-      Authorization: "Bearer REPLACE_BEARER_TOKEN",
-      "X-Request-ID": `${currentDate.getTime()}`,
-      "PSU-IP-Address": psuIpAddress,
-      "Initialized-By-PSU": false,
-      "Content-Type": "application/json",
-    };
-
     const foundCoupon = await Coupon.findOne({ code: couponCode });
+    const feeSplit = calculateFeeSplit(
+      parseFloat(orderAmount),
+      PLATFORM_FEE_PERCENT
+    );
 
     const neworder = new Order({
       eventId: new mongoose.Types.ObjectId(eventId),
       recommendations: recommendations === "true",
       tickets: transformedTickets,
       noOfTickets: parseInt(noOfTickets),
-      orderAmount: parseFloat(orderAmount),
+      orderAmount: feeSplit.orderAmount,
+      platformFeeAmount: feeSplit.platformFeeAmount,
+      netToBusiness: feeSplit.netToBusiness,
+      currency: eventRef?.eventCurrency || "EUR",
       customerEmail,
       customerName,
       paymentStatus: true,
@@ -328,9 +334,9 @@ export const createBankPaymentOrder = async (req, res, next) => {
     await Business.findByIdAndUpdate(business?._id, {
       earnings: {
         currentBalance:
-          (business?.earnings?.currentBalance || 0) + parseFloat(orderAmount),
+          (business?.earnings?.currentBalance || 0) + feeSplit.netToBusiness,
         totalEarnings:
-          (business?.earnings?.totalEarnings || 0) + parseFloat(orderAmount),
+          (business?.earnings?.totalEarnings || 0) + feeSplit.netToBusiness,
       },
     });
 
@@ -353,326 +359,37 @@ export const createBankPaymentOrder = async (req, res, next) => {
       business,
       tickets: transformedTickets,
       currency: currencySymbolGenerator(eventRef?.eventCurrency),
-      type: "Free Order - Online",
+      type: "Bank Transfer - Online",
     });
 
     console.log(invoiceResult, "invoice result");
 
-    SendTicketEmail({
+    await notifyNewPaidOrder({
+      order: neworder,
+      eventName: eventRef?.eventName,
+    });
+    await notifyTicketPurchase({
+      order: neworder,
+      eventName: eventRef?.eventName,
+    });
+
+    const savedDocs = saveOrderDocuments({
+      orderId: neworder._id.toString(),
+      pdfResult,
+      invoiceResult,
+    });
+    await SendTicketEmail({
       email: customerEmail,
       customerName,
       eventName: eventRef?.eventName,
-      attachments: [
-        ...pdfResult?.map((el, index) => ({
-          content: el.toString("base64"),
-          filename: `ticket${index}.pdf`,
-          type: "application/pdf",
-          disposition: "attachment",
-        })),
-        ...invoiceResult?.map((el, index) => ({
-          content: el?.toString("base64"),
-          filename: `Invoice.pdf`,
-          type: "application/pdf",
-          disposition: "attachment",
-        })),
-      ],
+      documentLinks: savedDocs.files,
+      attachments: buildTicketEmailAttachments(pdfResult, invoiceResult),
     });
 
     res.status(201).send({ message: "Order has been saved successfully." });
   } catch (error) {
     console.error(error);
     return res.status(500).send({ message: "Server error" });
-  }
-};
-
-export const createCardPaymentOrder = async (req, res, next) => {
-  try {
-    const {
-      paymentRequestToken,
-      eventId,
-      recommendations,
-      tickets,
-      noOfTickets,
-      orderAmount,
-      orderVatAmount,
-      customerEmail,
-      customerName,
-      city,
-      country,
-      postalCode,
-      addressDescription,
-      countryCode,
-    } = req.body;
-
-    const eventRef = await Event.findById(eventId);
-
-    const inputBody = {
-      merchantTransactionId: generateUniqueTransactionId(),
-      amount: `${parseFloat(orderAmount) + parseFloat(orderVatAmount)}`,
-      currency: eventRef?.eventCurrency || "EUR",
-      transactionToken: paymentRequestToken,
-      callbackUrl: callbackUrl,
-      successUrl: successUrl,
-      cancelUrl: cancelUrl,
-      errorUrl: errorUrl,
-      customer: {
-        billingAddress1: addressDescription,
-        billingCity: city,
-        billingCountry: countryCode,
-        billingPostcode: postalCode,
-        email: customerEmail,
-      },
-      threeDSecureData: {
-        "3dsecure": "MANDATORY",
-      },
-    };
-
-    const credentials = `${apiUsername}:${apiPassword}`;
-    const encodedCredentials = Buffer.from(credentials).toString("base64");
-
-    const currentDate = new Date().toUTCString();
-    // Prepare the message string for signing
-    const message = `POST\n${crypto
-      .createHash("sha512")
-      .update(JSON.stringify(inputBody))
-      .digest(
-        "hex"
-      )}\napplication/json; charset=utf-8\n${currentDate}\n/api/v3/transaction/${apiKey}/debit`;
-
-    // Create HMAC using sha512 and base64 encode the binary result
-    const signature = crypto
-      .createHmac("sha512", sharedSecret)
-      .update(message)
-      .digest("base64");
-
-    const headers = {
-      Authorization: `Basic ${encodedCredentials}`,
-      "Content-Type": "application/json; charset=utf-8",
-      Date: currentDate,
-      "X-Signature": signature,
-    };
-
-    const response = await axios.post(
-      `https://gateway.bankart.si/api/v3/transaction/${apiKey}/debit`,
-      inputBody,
-      { headers }
-    );
-
-    const responseBody = response.data;
-    console.log(responseBody, "payment data");
-    if (!responseBody.success || responseBody.success === "false") {
-      return res.status(400).send({ message: "Payment declined" });
-    }
-
-    if (!eventRef) {
-      return next(new HttpError("Event not found", 404));
-    }
-    const actualTickets = JSON.parse(tickets)?.filter(
-      (ticket) => ticket.noOfTickets > 0
-    );
-    const transformedTickets = actualTickets.map((ticket) => {
-      return {
-        ticketId: ticket.ticketId,
-        noOfTickets: ticket.noOfTickets,
-      };
-    });
-
-    const neworder = new Order({
-      eventId: new mongoose.Types.ObjectId(eventId),
-      recommendations: recommendations === "true",
-      purchaseId: responseBody?.purchaseId,
-      bankUuid: responseBody?.uuid,
-      tickets: transformedTickets,
-      noOfTickets: parseInt(noOfTickets),
-      orderAmount: parseFloat(orderAmount),
-      customerEmail,
-      customerName,
-      paymentStatus: false,
-      customerAddress: {
-        city,
-        country,
-        postalCode,
-        addressDescription,
-      },
-      businessId: eventRef.businessId,
-    });
-
-    actualTickets?.forEach((t) => {
-      eventRef.tickets = eventRef.tickets?.map((foundTicket) => {
-        if (foundTicket._id.toString() === t.ticketId) {
-          return {
-            ...foundTicket,
-            ticketOrders: foundTicket?.ticketOrders + t?.noOfTickets,
-            revenue: foundTicket.revenue + t.price * t?.noOfTickets,
-            remainingCapacity: foundTicket.remainingCapacity - t?.noOfTickets,
-          };
-        } else {
-          return foundTicket;
-        }
-      });
-    });
-
-    eventRef.ticketsSold += parseInt(noOfTickets);
-    eventRef.revenue += parseFloat(orderAmount);
-
-    const savedEvent = await eventRef.save();
-
-    if (savedEvent) {
-      await neworder.save();
-    } else {
-      return res.status(500).send({ message: "Server error" });
-    }
-
-    if (
-      responseBody.returnType === "REDIRECT" &&
-      responseBody.redirectType === "iframe"
-    ) {
-      return res.status(201).send({
-        message: "Order has been saved and needs redirection.",
-        data: {
-          redirectUrl: responseBody.redirectUrl,
-          returnType: responseBody.returnType,
-          redirectType: responseBody.redirectType,
-        },
-      });
-    }
-
-    return res
-      .status(201)
-      .send({ message: "Order has been saved successfully." });
-  } catch (error) {
-    console.error(error, "error in created payment with card");
-    return res.status(500).send({ message: "Server error" });
-  }
-};
-
-export const apiPaymentCallback = async (req, res, next) => {
-  const { purchaseId, result } = req.body;
-
-  console.log(req.body, "payment result");
-  try {
-    if (result === "OK") {
-      const order = await Order.findOneAndUpdate(
-        { purchaseId },
-        { paymentStatus: true },
-        { new: true }
-      );
-
-      const event = await Event.findById(order?.eventId);
-      const businessForCalc = await Business.findById(event?.businessId);
-
-      await Business.findByIdAndUpdate(event?.businessId, {
-        earnings: {
-          currentBalance:
-            (businessForCalc?.earnings?.currentBalance || 0) +
-            parseFloat(order?.orderAmount),
-          totalEarnings:
-            (businessForCalc?.earnings?.totalEarnings || 0) +
-            parseFloat(order?.orderAmount),
-        },
-      });
-
-      if (!event) {
-        console.log(" couldn't find event");
-        return;
-      }
-      if (!order?.automatedMailSent) {
-        const transformedTickets = [];
-
-        const tickets = order.tickets;
-
-        for (let i = 0; i < tickets.length; i++) {
-          const ticket = tickets[i];
-          const qrCodeData = `orderId=${order?._id}&&eventId=${event?._id}&&ticketId=${ticket?.ticketId}&&id=`;
-
-          const foundTicket = event?.tickets.find(
-            (t) => t._id?.toString() === ticket?.ticketId?.toString()
-          );
-
-          transformedTickets.push({
-            ticketId: ticket.ticketId,
-            noOfTickets: ticket.noOfTickets,
-            qrCodeData,
-            ticketAppearance: {
-              ...foundTicket?.ticketAppearance,
-              eventName: event?.eventName,
-              eventVenue: event?.eventVenue,
-              ticketPrice: foundTicket?.price,
-              ticketVat: foundTicket?.vat,
-              descriptionTicket: foundTicket?.descriptionTicket,
-              currency: currencySymbolGenerator(event?.eventCurrency),
-            },
-          });
-        }
-
-        const pdfResult = await generateTickets(transformedTickets);
-
-        console.log(pdfResult, "pdf result");
-
-        const business = await Business.findById(event?.businessId);
-
-        const totalVatCalculated = () => {
-          let total = 0;
-          transformedTickets?.forEach((ticket) => {
-            if (ticket?.noOfTickets > 0) {
-              for (let i = 0; i < ticket?.noOfTickets; i++) {
-                total += parseFloat(ticket?.ticketAppearance?.ticketVat);
-              }
-            }
-          });
-          console.log(total, "total vat calculated");
-          return total;
-        };
-
-        const invoiceResult = await generateInvoice({
-          order,
-          vatAmount: totalVatCalculated() || 0,
-          business,
-          tickets: transformedTickets,
-          currency: currencySymbolGenerator(event?.eventCurrency),
-          type: "Free Order - Online",
-        });
-
-        console.log(invoiceResult, "invoice result");
-
-        await SendTicketEmail({
-          customerName: order?.customerName,
-          eventName: event?.eventName,
-          email: order?.customerEmail,
-          attachments: [
-            ...pdfResult?.map((el, index) => ({
-              content: el.toString("base64"),
-              filename: `ticket${index}.pdf`,
-              type: "application/pdf",
-              disposition: "attachment",
-            })),
-            ...invoiceResult?.map((el, index) => ({
-              content: el?.toString("base64"),
-              filename: `Invoice.pdf`,
-              type: "application/pdf",
-              disposition: "attachment",
-            })),
-          ],
-        });
-
-        await Order.findOneAndUpdate(
-          { purchaseId },
-          { automatedMailSent: true },
-          { new: true }
-        );
-      }
-    } else {
-      const order = await Order.findOne({ purchaseId });
-      if (order) {
-        const event = await Event.findById(order?.eventId);
-        event.revenue -= order.orderAmount;
-        event.ticketsSold -= order.noOfTickets;
-        await event.save();
-      }
-    }
-    return res.status(200).send("OK");
-  } catch (error) {
-    return next(ServerError(error));
   }
 };
 
@@ -710,30 +427,29 @@ export const getLatestOrders = async (req, res, next) => {
 export const getOrdersByTimeInterval = async (req, res, next) => {
   const { interval } = req.params;
   const { eventId } = req.query;
-  const currentDate = new Date();
 
   let startDate;
   let orders = [];
 
   try {
     const { userId } = req;
-    console.log(userId, "ates orders");
 
     const { user, business } = await findBusinessAndUser({ _id: userId });
     if (!user || !business) {
       return next(new HttpError("Invalid id", 400));
     }
 
+    const rates = await getRatesFromEur();
+
     if (interval === "monthly") {
-      const endDate = new Date(); // Today's date
+      const endDate = new Date();
       startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30); // 30 days ago from today
+      startDate.setDate(startDate.getDate() - 30);
 
       const query = {
         paymentStatus: true,
         businessId: business?._id,
-        updatedAt: { $gte: startDate },
-        updatedAt: { $lte: endDate },
+        updatedAt: { $gte: startDate, $lte: endDate },
       };
 
       if (eventId && eventId !== "undefined") {
@@ -741,12 +457,11 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
       }
 
       const foundOrders = await Order.find(query).select(
-        "updatedAt orderAmount"
+        "updatedAt orderAmount currency"
       );
 
-      const aggregatedOrders = {}; // Object to store aggregated order amounts by day
+      const aggregatedOrders = {};
 
-      // Initialize the aggregatedOrders object with 0 for each day within the date range
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
         const dayKey = currentDate.toISOString().substring(0, 10);
@@ -754,16 +469,16 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // Update aggregated order amounts based on the fetched orders
       foundOrders.forEach((order) => {
         const dayKey = order.updatedAt.toISOString().substring(0, 10);
-        aggregatedOrders[dayKey] += order.orderAmount;
+        aggregatedOrders[dayKey] += amountInEur(order, "orderAmount", rates);
       });
 
       orders = Object.entries(aggregatedOrders).map(
         ([updatedAt, orderAmount]) => ({
           updatedAt,
-          orderAmount,
+          orderAmount: roundMoney(orderAmount),
+          currency: "EUR",
         })
       );
     } else if (interval === "yearly") {
@@ -782,9 +497,9 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
         "December",
       ];
 
-      const endDate = new Date(); // Today's date
+      const endDate = new Date();
       startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 11); // 12 months ago from today
+      startDate.setMonth(startDate.getMonth() - 11);
 
       const query = {
         businessId: business?._id,
@@ -797,45 +512,44 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
       }
 
       const foundOrders = await Order.find(query).select(
-        "updatedAt orderAmount"
+        "updatedAt orderAmount currency"
       );
 
-      const aggregatedOrders = {}; // Object to store aggregated order amounts by month
+      const aggregatedOrders = {};
 
-      // Loop through the last 12 months and initialize aggregated order amounts
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
-        const monthYear = currentDate.toISOString().substring(0, 7); // Format: YYYY-MM
+        const monthYear = currentDate.toISOString().substring(0, 7);
         if (!aggregatedOrders[monthYear]) {
           aggregatedOrders[monthYear] = 0;
         }
         currentDate.setMonth(currentDate.getMonth() + 1);
       }
 
-      // Loop through each order and update aggregated order amounts by month
       foundOrders.forEach((order) => {
-        const monthYear = order.updatedAt.toISOString().substring(0, 7); // Format: YYYY-MM
+        const monthYear = order.updatedAt.toISOString().substring(0, 7);
         if (!aggregatedOrders[monthYear]) {
           aggregatedOrders[monthYear] = 0;
         }
-        aggregatedOrders[monthYear] += order.orderAmount;
+        aggregatedOrders[monthYear] += amountInEur(order, "orderAmount", rates);
       });
 
       orders = Object.entries(aggregatedOrders).map(
         ([monthYear, orderAmount]) => {
           const [year, month] = monthYear.split("-");
-          const monthName = monthNames[parseInt(month, 10) - 1]; // Month is 0-indexed
+          const monthName = monthNames[parseInt(month, 10) - 1];
 
           return {
             updatedAt: `${monthName} ${year}`,
-            orderAmount,
+            orderAmount: roundMoney(orderAmount),
+            currency: "EUR",
           };
         }
       );
     } else if (interval === "weekly") {
-      const endDate = new Date(); // Today's date
+      const endDate = new Date();
       startDate = new Date();
-      startDate.setDate(startDate.getDate() - 7); // 7 days ago from today
+      startDate.setDate(startDate.getDate() - 7);
 
       const query = {
         businessId: business?._id,
@@ -848,12 +562,11 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
       }
 
       const foundOrders = await Order.find(query).select(
-        "updatedAt orderAmount"
+        "updatedAt orderAmount currency"
       );
 
-      const aggregatedOrders = {}; // Object to store aggregated order amounts by day
+      const aggregatedOrders = {};
 
-      // Initialize the aggregatedOrders object with 0 for each day within the date range
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
         const dayKey = currentDate.toISOString().substring(0, 10);
@@ -861,32 +574,33 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // Update aggregated order amounts based on the fetched orders
       foundOrders.forEach((order) => {
         const dayKey = order?.updatedAt.toISOString().substring(0, 10);
-        aggregatedOrders[dayKey] += order?.orderAmount;
+        aggregatedOrders[dayKey] += amountInEur(order, "orderAmount", rates);
       });
 
-      orders = Object.entries(aggregatedOrders)?.map(
+      orders = Object.entries(aggregatedOrders).map(
         ([updatedAt, orderAmount]) => ({
           updatedAt,
-          orderAmount,
+          orderAmount: roundMoney(orderAmount),
+          currency: "EUR",
         })
       );
     } else if (interval === "daily") {
       startDate = new Date();
-      const endDate = new Date(startDate); // Current date
+      const endDate = new Date(startDate);
 
-      startDate.setHours(0, 0, 0, 0); // Set start time to midnight of the current day
+      startDate.setHours(0, 0, 0, 0);
       endDate.setDate(endDate.getDate() + 1);
-
-      // Set end time to midnight of the next day
       endDate.setHours(0, 0, 0, 0);
 
       const query = {
         businessId: business?._id,
         paymentStatus: true,
-        updatedAt: { $gte: startDate, $lte: endDate },
+        $or: [
+          { updatedAt: { $gte: startDate, $lt: endDate } },
+          { createdAt: { $gte: startDate, $lt: endDate } },
+        ],
       };
 
       if (eventId && eventId !== "undefined") {
@@ -894,36 +608,39 @@ export const getOrdersByTimeInterval = async (req, res, next) => {
       }
 
       const foundOrders = await Order.find(query).select(
-        "updatedAt orderAmount"
+        "updatedAt createdAt orderAmount currency"
       );
 
-      const aggregatedOrders = {}; // Object to store aggregated order amounts by hour
+      const aggregatedOrders = {};
 
-      // Initialize the aggregatedOrders object with 0 for each hour within the date range
       const currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        const hourKey = currentDate.toISOString(); // Format: YYYY-MM-DDTHH
+      while (currentDate < endDate) {
+        const hourKey = toLocalHourBucket(currentDate);
         aggregatedOrders[hourKey] = 0;
         currentDate.setHours(currentDate.getHours() + 1);
       }
 
-      // Update aggregated order amounts based on the fetched orders
       foundOrders.forEach((order) => {
-        const hourKey = order.updatedAt.toISOString(); // Format: YYYY-MM-DDTHH
-        aggregatedOrders[hourKey] += order.orderAmount;
+        const when = order.updatedAt || order.createdAt;
+        const hourKey = toLocalHourBucket(when);
+        if (aggregatedOrders[hourKey] === undefined) return;
+        aggregatedOrders[hourKey] += amountInEur(order, "orderAmount", rates);
       });
 
       orders = Object.entries(aggregatedOrders).map(
         ([updatedAt, orderAmount]) => ({
           updatedAt,
-          orderAmount,
+          orderAmount: roundMoney(orderAmount),
+          currency: "EUR",
         })
       );
     } else {
       return res.status(400).json({ message: "Invalid interval" });
     }
 
-    res.status(200).json({ message: "Orders by interval", orders });
+    res
+      .status(200)
+      .json({ message: "Orders by interval", orders, currency: "EUR" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
@@ -956,7 +673,6 @@ export const getAllOrdersByEvent = async (req, res, next) => {
 
 export const getBusinessRevenueByMonth = async (req, res, next) => {
   const { month } = req.params;
-
   const currentYear = new Date().getFullYear();
 
   try {
@@ -967,7 +683,7 @@ export const getBusinessRevenueByMonth = async (req, res, next) => {
       return next(new HttpError("Invalid id", 400));
     }
 
-    const data = await Order.aggregate([
+    const rows = await Order.aggregate([
       {
         $match: {
           businessId: business?._id,
@@ -980,17 +696,182 @@ export const getBusinessRevenueByMonth = async (req, res, next) => {
       },
       {
         $group: {
-          _id: "$businessId",
+          _id: { $ifNull: ["$currency", "EUR"] },
           totalOrders: { $sum: 1 },
           totalTicketsSold: { $sum: "$noOfTickets" },
           totalRevenue: { $sum: "$orderAmount" },
+          totalPlatformFees: { $sum: "$platformFeeAmount" },
+          totalNetToBusiness: { $sum: "$netToBusiness" },
         },
       },
     ]).exec();
+
+    const rates = await getRatesFromEur();
+
+    let totalOrders = 0;
+    let totalTicketsSold = 0;
+    let totalRevenue = 0;
+    let totalPlatformFees = 0;
+    let totalNetToBusiness = 0;
+
+    for (const row of rows) {
+      const currency = normalizeCurrency(row._id);
+      totalOrders += row.totalOrders || 0;
+      totalTicketsSold += row.totalTicketsSold || 0;
+      totalRevenue += convertToEurWithRates(
+        row.totalRevenue,
+        currency,
+        rates
+      );
+      totalPlatformFees += convertToEurWithRates(
+        row.totalPlatformFees,
+        currency,
+        rates
+      );
+      totalNetToBusiness += convertToEurWithRates(
+        row.totalNetToBusiness,
+        currency,
+        rates
+      );
+    }
+
+    const data = [
+      {
+        currency: "EUR",
+        totalOrders,
+        totalTicketsSold,
+        totalRevenue: roundMoney(totalRevenue),
+        totalPlatformFees: roundMoney(totalPlatformFees),
+        totalNetToBusiness: roundMoney(totalNetToBusiness),
+      },
+    ];
 
     res.status(200).json({ message: "revenue data", data });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Lifetime finance totals for the logged-in business.
+ * Sales = gross paid orders, Fees = platform fees (8%), Earnings = net to business.
+ * All amounts are converted to EUR.
+ */
+export const getBusinessFinanceSummary = async (req, res, next) => {
+  try {
+    const { user, business } = await findBusinessAndUser({ _id: req.userId });
+    if (!user || !business) {
+      return next(new HttpError("Invalid id", 400));
+    }
+
+    const rows = await Order.aggregate([
+      {
+        $match: {
+          businessId: business._id,
+          paymentStatus: true,
+        },
+      },
+      {
+        $group: {
+          _id: { $ifNull: ["$currency", "EUR"] },
+          totalOrders: { $sum: 1 },
+          totalSales: { $sum: { $ifNull: ["$orderAmount", 0] } },
+          totalFees: {
+            $sum: {
+              $cond: [
+                { $gt: [{ $ifNull: ["$platformFeeAmount", 0] }, 0] },
+                "$platformFeeAmount",
+                {
+                  $round: [
+                    {
+                      $multiply: [{ $ifNull: ["$orderAmount", 0] }, 0.08],
+                    },
+                    2,
+                  ],
+                },
+              ],
+            },
+          },
+          totalEarnings: {
+            $sum: {
+              $cond: [
+                { $gt: [{ $ifNull: ["$netToBusiness", 0] }, 0] },
+                "$netToBusiness",
+                {
+                  $round: [
+                    {
+                      $subtract: [
+                        { $ifNull: ["$orderAmount", 0] },
+                        {
+                          $cond: [
+                            {
+                              $gt: [
+                                { $ifNull: ["$platformFeeAmount", 0] },
+                                0,
+                              ],
+                            },
+                            "$platformFeeAmount",
+                            {
+                              $round: [
+                                {
+                                  $multiply: [
+                                    { $ifNull: ["$orderAmount", 0] },
+                                    0.08,
+                                  ],
+                                },
+                                2,
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    2,
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const rates = await getRatesFromEur();
+
+    let totalOrders = 0;
+    let totalSales = 0;
+    let totalFees = 0;
+    let totalEarnings = 0;
+
+    for (const row of rows) {
+      const currency = normalizeCurrency(row._id);
+      totalOrders += row.totalOrders || 0;
+      totalSales += convertToEurWithRates(row.totalSales, currency, rates);
+      totalFees += convertToEurWithRates(row.totalFees, currency, rates);
+      totalEarnings += convertToEurWithRates(
+        row.totalEarnings,
+        currency,
+        rates
+      );
+    }
+
+    const currentBalance = Number(business?.earnings?.currentBalance || 0);
+
+    return res.status(200).json({
+      message: "Finance summary",
+      data: {
+        totalOrders,
+        totalSales: roundMoney(totalSales),
+        totalFees: roundMoney(totalFees),
+        totalEarnings: roundMoney(totalEarnings),
+        currentBalance: roundMoney(currentBalance),
+        currency: "EUR",
+        feePercent: PLATFORM_FEE_PERCENT,
+      },
+    });
+  } catch (error) {
+    console.error("getBusinessFinanceSummary", error);
+    return next(ServerError(error));
   }
 };

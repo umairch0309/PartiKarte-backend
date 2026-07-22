@@ -115,7 +115,7 @@ export const updateBusinessContact = async (req, res, next) => {
  */
 export const updateBusinessFinancialInformation = async (req, res, next) => {
   const userId = req.userId;
-  const { IBAN, accountName, invoiceEmail } = req.body;
+  const { invoiceEmail } = req.body;
 
   try {
     const { user, business } = await findBusinessAndUser({ _id: userId });
@@ -125,8 +125,9 @@ export const updateBusinessFinancialInformation = async (req, res, next) => {
 
     const mybusiness = await Business.findById(business._id);
 
-    mybusiness.financialInformation.IBAN = IBAN;
-    mybusiness.financialInformation.accountName = accountName;
+    if (!mybusiness.financialInformation) {
+      mybusiness.financialInformation = {};
+    }
     mybusiness.financialInformation.invoiceEmail = invoiceEmail;
 
     const updatedBusiness = await mybusiness.save();
@@ -195,17 +196,17 @@ export const updateProfile = async (req, res, next) => {
     }
 
     const myUser = await User.findById(user._id);
+    const imageFile = Array.isArray(req.files) ? req.files[0] : req.file || null;
 
-    if (myUser && req.files) {
-      console.log(req.files[0]);
-      isImageFile(req.files[0]?.mimetype, next);
+    if (myUser && imageFile?.buffer) {
+      isImageFile(imageFile.mimetype, next);
 
       const uploadedImageObj = await uploadS3Image(
-        req.files[0],
+        imageFile,
         "profile_images/",
         next
       );
-      if (uploadedImageObj.uploadedImagePath && uploadedImageObj.status) {
+      if (uploadedImageObj?.uploadedImagePath && uploadedImageObj.status) {
         uploadedImage = uploadedImageObj.uploadedImagePath;
       }
     }

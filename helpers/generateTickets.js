@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import QRCode from "qrcode";
 import generatePDF from "./generatePDF.js";
+import { getBrandLogoUrl } from "./brandAssets.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,8 +36,8 @@ const generateTickets = async (tickets) => {
         const qrCode = await generateQRCodeData(qrCodeDataString);
 
         const html = await ejs.renderFile(
-          __dirname + `/ticket_templates/template.ejs`,
-          { ...ticket?.ticketAppearance, qrCode }
+          path.join(__dirname, "ticket_templates", "template.ejs"),
+          { ...ticket?.ticketAppearance, qrCode, logoUrl: getBrandLogoUrl("white") }
         );
 
         htmlFiles.push(html);
