@@ -162,7 +162,7 @@ export const createNewEvent = async (req, res, next) => {
     } else {
       return next(
         new HttpError(
-          "Could not upload event banner. Check AWS credentials or local upload fallback.",
+          "Could not upload event banner. On Vercel add BLOB_READ_WRITE_TOKEN (Storage → Blob); locally use USE_LOCAL_UPLOAD_FALLBACK=true.",
           500
         )
       );
